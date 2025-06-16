@@ -1,5 +1,6 @@
 import boto3
 import hashlib
+import os
 
 # Hashear contraseña
 def hash_password(password):
@@ -9,22 +10,25 @@ def hash_password(password):
 # Función que maneja el registro de user y validación del password
 def lambda_handler(event, context):
     try:
-        # Obtener el email y el password
-        email = event.get('email')
+        # Obtener datos
+        tenant_id = event.get('tenant_id')
+        dni = event.get('dni')
         nombre = event.get("full_name")
         password = event.get('password')
+        nombre_tabla = os.environ["TABLE_USER"]
         
         # Verificar que el email y el password existen
-        if user_id and password:
+        if (tenant_id and dni and nombre and password):
             # Hashea la contraseña antes de almacenarla
             hashed_password = hash_password(password)
             # Conectar DynamoDB
             dynamodb = boto3.resource('dynamodb')
-            t_usuarios = dynamodb.Table('t_usuarios')
+            t_usuarios = dynamodb.Table(nombre_tabla)
             # Almacena los datos del user en la tabla de usuarios en DynamoDB
             t_usuarios.put_item(
                 Item={
-                    'email': email,
+                    'tenant_id': tenant_id,
+                    'dni':dni,
                     "full name": nombre,
                     'password': hashed_password,
                 }
@@ -32,7 +36,7 @@ def lambda_handler(event, context):
             # Retornar un código de estado HTTP 200 (OK) y un mensaje de éxito
             mensaje = {
                 'message': 'User registered successfully',
-                'email': email
+                'nombre': nombre
             }
             return {
                 'statusCode': 200,
@@ -40,7 +44,7 @@ def lambda_handler(event, context):
             }
         else:
             mensaje = {
-                'error': 'Invalid request body: missing user_id or password'
+                'error': 'Invalid request body: missing tennant_ id or dni or nombre password'
             }
             return {
                 'statusCode': 400,

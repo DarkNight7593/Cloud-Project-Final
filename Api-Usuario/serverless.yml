@@ -1,0 +1,71 @@
+org: juanrodo
+service: api-usuario
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::674438223832:role/LabRole
+  environment:
+    TABLE_USER: ${sls:stage}-t_usuario
+    TABLE_TOKEN: ${sls:stage}-t_token
+
+functions:
+  crear:
+    handler: Lambda_CrearUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/crear
+          method: post
+          cors: true
+          integration: lambda
+  login:
+    handler: Lambda_LoginUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/login
+          method: post
+          cors: true
+          integration: lambda
+  validar:
+    handler: Lambda_LoginUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/login
+          method: post
+          cors: true
+          integration: lambda
+resources:
+  Resources:
+    TablaUsuarios:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-t_usuario
+        AttributeDefinitions:
+          - AttributeName: tenant_id
+            AttributeType: S
+          - AttributeName: dni
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tenant_id
+            KeyType: HASH
+          - AttributeName: dni
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+    TablaTokens:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-t_token
+        AttributeDefinitions:
+          - AttributeName: tenant_id
+            AttributeType: S
+          - AttributeName: token
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tenant_id
+            KeyType: HASH
+          - AttributeName: token
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
