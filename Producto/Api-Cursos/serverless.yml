@@ -1,0 +1,12 @@
+org: juanrodo
+service: api-cursos
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::674438223832:role/LabRole
+  environment:
+    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar

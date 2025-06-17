@@ -12,16 +12,13 @@ def lambda_handler(event, context):
     try:
         # Obtener datos
         tenant_id = event.get('tenant_id')
-        dni = event.get('dni')
-        nombre = event.get("full_name")
-        password = event.get('password')
-        rol = event.get('rol')
-        nombre_tabla = os.environ["TABLE_USER"]
+        domain = event.get('domain')
+        descripcion = event.get("descripcion")
+        correo = event.get('correo')
+        nombre_tabla = os.environ["TABLE_ORG"]
         
         # Verificar que el email y el password existen
-        if (tenant_id and dni and nombre and password):
-            # Hashea la contraseña antes de almacenarla
-            hashed_password = hash_password(password)
+        if (tenant_id and domain and descripcion and correo):
             # Conectar DynamoDB
             dynamodb = boto3.resource('dynamodb')
             t_usuarios = dynamodb.Table(nombre_tabla)
@@ -29,16 +26,15 @@ def lambda_handler(event, context):
             t_usuarios.put_item(
                 Item={
                     'tenant_id': tenant_id,
-                    'dni':dni,
-                    "full name": nombre,
-                    "rol":rol,
-                    'password': hashed_password
+                    'descripcion':descripcion,
+                    "correo": correo,
+                    'domain': domain
                 }
             )
             # Retornar un código de estado HTTP 200 (OK) y un mensaje de éxito
             mensaje = {
-                'message': 'User registered successfully',
-                'nombre': nombre
+                'message': 'Org registered successfully',
+                'nombre': tenant_id
             }
             return {
                 'statusCode': 200,
@@ -46,7 +42,7 @@ def lambda_handler(event, context):
             }
         else:
             mensaje = {
-                'error': 'Invalid request body: missing tennant_ id or dni or nombre password'
+                'error': 'Invalid request body: missing tennant_ id or descripcion or domain or correo'
             }
             return {
                 'statusCode': 400,
