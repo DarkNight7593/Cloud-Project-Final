@@ -11,7 +11,7 @@ provider:
   environment:
     TABLE_CURSO: ${sls:stage}-t_curso
     TABLE_USER: ${sls:stage}-t_usuario
-    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
+    FUNCION_VALIDAR: api-usuario-${sls:stage}-valida
 
 functions:
   crearCurso:
