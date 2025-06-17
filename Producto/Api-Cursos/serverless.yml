@@ -1,12 +1,73 @@
 org: juanrodo
-service: api-cursos
+service: api-curso
 
 provider:
   name: aws
-  runtime: nodejs22.x
+  runtime: nodejs20.x
   memorySize: 1024
   timeout: 30
   iam:
     role: arn:aws:iam::674438223832:role/LabRole
   environment:
+    TABLE_CURSO: ${sls:stage}-t_curso
+    TABLE_USER: ${sls:stage}-t_usuario
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
+
+functions:
+  crearCurso:
+    handler: Lambda_CrearCurso.handler
+    events:
+      - http:
+          path: /curso
+          method: post
+          cors: true
+
+  listarCursos:
+    handler: Lambda_ListarCursos.handler
+    events:
+      - http:
+          path: /curso
+          method: get
+          cors: true
+
+  obtenerCurso:
+    handler: Lambda_BuscarCurso.handler
+    events:
+      - http:
+          path: /curso/buscar
+          method: get
+          cors: true
+
+  actualizarCurso:
+    handler: Lambda_ModiCurso.handler
+    events:
+      - http:
+          path: /curso/modificar
+          method: put
+          cors: true
+
+  eliminarCurso:
+    handler: Lambda_EliminarCurso.handler
+    events:
+      - http:
+          path: /curso/eliminar
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    TablaCursos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-t_curso
+        AttributeDefinitions:
+          - AttributeName: tenant_id
+            AttributeType: S
+          - AttributeName: curso_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tenant_id
+            KeyType: HASH
+          - AttributeName: curso_id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST

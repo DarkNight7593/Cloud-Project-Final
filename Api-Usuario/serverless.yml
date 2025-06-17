@@ -31,10 +31,10 @@ functions:
           cors: true
           integration: lambda
   validar:
-    handler: Lambda_LoginUsuario.lambda_handler
+    handler: Lambda_ValidarTokenAcceso.lambda_handler
     events:
       - http:
-          path: /usuario/login
+          path: /usuario/validar
           method: post
           cors: true
           integration: lambda
@@ -70,7 +70,7 @@ resources:
           - AttributeName: token
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
-    TablaTokens:
+    TablaOrg:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${sls:stage}-t_org
