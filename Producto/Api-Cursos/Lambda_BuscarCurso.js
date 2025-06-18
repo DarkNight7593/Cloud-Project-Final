@@ -21,7 +21,7 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
 
     const { tenant_id } = validarPayload.body;
-    const curso_id = event.pathParameters?.id;
+    const { curso_id } = event.queryStringParameters || {};
     if (!curso_id) return { statusCode: 400, body: JSON.stringify({ error: 'curso_id requerido' }) };
 
     const result = await dynamodb.get({

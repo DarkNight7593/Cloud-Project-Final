@@ -1,5 +1,5 @@
 org: juanrodo
-service: api-curso
+service: api-horario
 
 provider:
   name: aws
@@ -9,16 +9,15 @@ provider:
   iam:
     role: arn:aws:iam::674438223832:role/LabRole
   environment:
-    TABLE_CURSO: ${sls:stage}-t_curso
-    TABLE_USER: ${sls:stage}-t_horario
-    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar 
+    TABLE_HORARIO: ${sls:stage}-t_horario
+    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
 
 functions:
   crearHorario:
     handler: Lambda_CrearHorario.handler
     events:
       - http:
-          path: /curso
+          path: /curso/horario/crear
           method: post
           cors: true
 
@@ -26,7 +25,7 @@ functions:
     handler: Lambda_ListarHorario.handler
     events:
       - http:
-          path: /curso
+          path: /curso/horario/listar
           method: get
           cors: true
 
@@ -34,7 +33,7 @@ functions:
     handler: Lambda_BuscarHorario.handler
     events:
       - http:
-          path: /curso/buscar
+          path: /curso/horario/buscar
           method: get
           cors: true
 
@@ -42,7 +41,7 @@ functions:
     handler: Lambda_ModiHorario.handler
     events:
       - http:
-          path: /curso/modificar
+          path: /curso/horario/modificar
           method: put
           cors: true
 
@@ -50,7 +49,7 @@ functions:
     handler: Lambda_EliminarHorario.handler
     events:
       - http:
-          path: /curso/eliminar
+          path: /curso/horario/eliminar
           method: delete
           cors: true
 
@@ -61,12 +60,12 @@ resources:
       Properties:
         TableName: ${sls:stage}-t_horario
         AttributeDefinitions:
-          - AttributeName: tenant_id
+          - AttributeName: tenant_id$curso_id
             AttributeType: S
           - AttributeName: horario_id
             AttributeType: S
         KeySchema:
-          - AttributeName: tenant_id
+          - AttributeName: tenant_id$curso_id
             KeyType: HASH
           - AttributeName: horario_id
             KeyType: RANGE

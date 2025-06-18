@@ -11,14 +11,16 @@ provider:
   environment:
     TABLE_CURSO: ${sls:stage}-t_curso
     TABLE_USER: ${sls:stage}-t_usuario
-    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar 
+    TABLE_HORARIO: ${sls:stage}-t_horario
+    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
+    FUNCION_ELIMINAR_HORARIO: api-horario-${sls:stage}-eliminarHorario
 
 functions:
   crearCurso:
     handler: Lambda_CrearCurso.handler
     events:
       - http:
-          path: /curso
+          path: /curso/crear
           method: post
           cors: true
 
@@ -26,7 +28,7 @@ functions:
     handler: Lambda_ListarCursos.handler
     events:
       - http:
-          path: /curso
+          path: /curso/listar
           method: get
           cors: true
 
@@ -65,9 +67,21 @@ resources:
             AttributeType: S
           - AttributeName: curso_id
             AttributeType: S
+          - AttributeName: instructor_dni
+            AttributeType: S
         KeySchema:
           - AttributeName: tenant_id
             KeyType: HASH
           - AttributeName: curso_id
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes:
+          - IndexName: tenant_instructor_index
+            KeySchema:
+              - AttributeName: tenant_id
+                KeyType: HASH
+              - AttributeName: instructor_dni
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+

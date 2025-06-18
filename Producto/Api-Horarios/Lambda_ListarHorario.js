@@ -15,15 +15,14 @@ exports.handler = async (event) => {
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
     const { tenant_id } = validarPayload.body;
-    const body = JSON.parse(event.body);
-    const { curso_id, limit = 5, lastKey } = body;
-    const pk = `${tenant_id}#${curso_id}`;
+    const { curso_id, limit = 5, lastKey } = event.queryStringParameters;
+    const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
 
     const result = await dynamodb.query({
       TableName: TABLE_HORARIO,
-      KeyConditionExpression: 'pk = :pk',
-      ExpressionAttributeValues: { ':pk': pk },
+      KeyConditionExpression: 'tenant_id$curso_id = :pk',
+      ExpressionAttributeValues: { ':pk': tenant_id$curso_id },
       Limit: parseInt(limit),
       ExclusiveStartKey: decodedLastKey
     }).promise();

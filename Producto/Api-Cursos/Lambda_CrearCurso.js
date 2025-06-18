@@ -9,7 +9,8 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    if (!token) return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
+    if (!token)
+      return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
 
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
@@ -23,15 +24,15 @@ exports.handler = async (event) => {
 
     const { tenant_id, dni } = validarPayload.body;
     const data = JSON.parse(event.body);
-
     const { nombre, descripcion, inicio, fin, precio } = data;
+
     if (!nombre || !descripcion)
       return { statusCode: 400, body: JSON.stringify({ error: 'Faltan campos obligatorios' }) };
 
     const curso_id = uuidv4();
     await dynamodb.put({
       TableName: TABLE_CURSO,
-      Item: { tenant_id, curso_id, nombre, descripcion, inicio, fin, precio, instructor_dni: dni }
+      Item: { tenant_id, curso_id,instructor_dni: dni, nombre, descripcion, inicio, fin, precio }
     }).promise();
 
     return {
@@ -39,7 +40,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ message: 'Curso creado exitosamente', curso_id, nombre })
     };
   } catch (error) {
-    console.error("Error:", error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
+

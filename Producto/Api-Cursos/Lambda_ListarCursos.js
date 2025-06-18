@@ -16,7 +16,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Validar el token llamando a la Lambda de autenticación
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
@@ -32,29 +31,26 @@ exports.handler = async (event) => {
     }
 
     const { tenant_id } = validarPayload.body;
-
-    // Leer parámetros de paginación y filtro
-    const { limit = 5, lastKey } = event.queryStringParameters || {};
+    const { limit = 5, lastKey, dni_instructor } = event.queryStringParameters || {};
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
 
-    const body = event.body ? JSON.parse(event.body) : {};
-    const dniInstructorFiltro = body.dni_instructor;
-
-    // Definir parámetros de consulta
     let params;
-    if (dniInstructorFiltro) {
+
+    if (dni_instructor) {
+      // Usamos el GSI tenant_instructor_index
       params = {
         TableName: TABLE_CURSO,
-        KeyConditionExpression: 'tenant_id = :tenant_id',
-        FilterExpression: 'instructor_dni = :dni',
+        IndexName: 'tenant_instructor_index',
+        KeyConditionExpression: 'tenant_id = :tenant_id AND instructor_dni = :dni',
         ExpressionAttributeValues: {
           ':tenant_id': tenant_id,
-          ':dni': dniInstructorFiltro
+          ':dni': dni_instructor
         },
         Limit: parseInt(limit),
         ExclusiveStartKey: decodedLastKey
       };
     } else {
+      // Consulta normal por tenant_id
       params = {
         TableName: TABLE_CURSO,
         KeyConditionExpression: 'tenant_id = :tenant_id',
@@ -68,18 +64,16 @@ exports.handler = async (event) => {
 
     const result = await dynamodb.query(params).promise();
 
-    // Reemplazar instructor_dni por nombre del instructor
     const cursosConNombres = await Promise.all(result.Items.map(async (curso) => {
       const userParams = {
         TableName: TABLE_USUARIO,
         Key: {
-          tenant_id: tenant_id,
+          tenant_id,
           dni: curso.instructor_dni
         }
       };
-
       const userResult = await dynamodb.get(userParams).promise();
-      const nombreInstructor = userResult.Item ? userResult.Item.nombre : curso.instructor_dni;
+      const nombreInstructor = userResult.Item?.nombre || curso.instructor_dni;
 
       return {
         ...curso,
@@ -103,3 +97,4 @@ exports.handler = async (event) => {
     };
   }
 };
+

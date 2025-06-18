@@ -1,8 +1,9 @@
 const AWS = require('aws-sdk');
+const uuid = require('uuid');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const lambda = new AWS.Lambda();
 
-const TABLE_CURSO = process.env.TABLE_CURSO;
+const TABLE_HORARIO = process.env.TABLE_HORARIO;
 const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 
 exports.handler = async (event) => {
@@ -10,27 +11,19 @@ exports.handler = async (event) => {
     const token = event.headers?.Authorization;
     if (!token) return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
 
-    const validar = await lambda.invoke({
-      FunctionName: FUNCION_VALIDAR,
-      InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
-    }).promise();
-
+    const validar = await lambda.invoke({ FunctionName: FUNCION_VALIDAR, InvocationType: 'RequestResponse', Payload: JSON.stringify({ token }) }).promise();
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403)
-      return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
+    if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
     const { tenant_id } = validarPayload.body;
-    const curso_id = event.pathParameters?.id;
-    if (!curso_id) return { statusCode: 400, body: JSON.stringify({ error: 'curso_id requerido' }) };
+    const { curso_id, horario_id } = JSON.parse(event.body);
+    const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
 
-    await dynamodb.delete({
-      TableName: TABLE_CURSO,
-      Key: { tenant_id, curso_id }
-    }).promise();
+    await dynamodb.delete({ TableName: TABLE_HORARIO, Key: { tenant_id$curso_id, horario_id } }).promise();
 
-    return { statusCode: 200, body: JSON.stringify({ message: 'Curso eliminado correctamente' }) };
-  } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 200, body: JSON.stringify({ message: 'Horario eliminado' }) };
+
+  } catch (e) {
+    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
 };

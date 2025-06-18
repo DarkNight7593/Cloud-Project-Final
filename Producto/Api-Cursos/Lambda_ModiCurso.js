@@ -21,13 +21,12 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
 
     const { tenant_id } = validarPayload.body;
-    const curso_id = event.pathParameters?.id;
-    const body = JSON.parse(event.body);
-
+    const { curso_id } = event.queryStringParameters || {};
     if (!curso_id) return { statusCode: 400, body: JSON.stringify({ error: 'curso_id requerido' }) };
 
-    const updateFields = {};
+    const body = JSON.parse(event.body);
     const allowedFields = ['nombre', 'descripcion', 'inicio', 'fin', 'precio'];
+    const updateFields = {};
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -55,3 +54,4 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
+

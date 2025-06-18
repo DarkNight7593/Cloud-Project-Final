@@ -1,5 +1,4 @@
 const AWS = require('aws-sdk');
-const uuid = require('uuid');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const lambda = new AWS.Lambda();
 
@@ -11,35 +10,18 @@ exports.handler = async (event) => {
     const token = event.headers?.Authorization;
     if (!token) return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
 
-    const validar = await lambda.invoke({
-      FunctionName: FUNCION_VALIDAR,
-      InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
-    }).promise();
-
+    const validar = await lambda.invoke({ FunctionName: FUNCION_VALIDAR, InvocationType: 'RequestResponse', Payload: JSON.stringify({ token }) }).promise();
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
     const { tenant_id } = validarPayload.body;
-    const body = JSON.parse(event.body);
-    const { curso_id, dias, inicio_hora, fin_hora } = body;
-
-    const horario_id = uuid.v4();
+    const { curso_id, horario_id } = event.queryStringParameters;
     const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
 
-    await dynamodb.put({
-      TableName: TABLE_HORARIO,
-      Item: {
-        tenant_id$curso_id,
-        horario_id,
-        dias,
-        inicio_hora,
-        fin_hora
-      }
-    }).promise();
+    const result = await dynamodb.get({ TableName: TABLE_HORARIO, Key: { tenant_id$curso_id, horario_id } }).promise();
 
-    return { statusCode: 200, body: JSON.stringify({ message: 'Horario creado', horario_id }) };
-
+    if (!result.Item) return { statusCode: 404, body: JSON.stringify({ error: 'Horario no encontrado' }) };
+    return { statusCode: 200, body: JSON.stringify(result.Item) };
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
