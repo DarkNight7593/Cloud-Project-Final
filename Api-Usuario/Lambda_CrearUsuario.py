@@ -31,7 +31,7 @@ def lambda_handler(event, context):
         # Si es instructor, validar token y rol
         if rol == 'instructor':
             token = event.get('headers', {}).get('Authorization')
-            token = '"' + token +  '"'
+            payload_string = '{ "token": "' + token +  '" }'
             if not token:
                 return {
                     'statusCode': 403,
@@ -42,7 +42,7 @@ def lambda_handler(event, context):
             validar_response = lambda_client.invoke(
                 FunctionName=os.environ['FUNCION_VALIDAR'],
                 InvocationType='RequestResponse',
-                Payload=json.dumps({'token': token})
+                Payload=payload_string
             )
             payload_bytes = validar_response['Payload'].read()
             validar_payload = json.loads(payload_bytes)
