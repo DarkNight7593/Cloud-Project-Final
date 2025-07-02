@@ -1,7 +1,0 @@
-{
-  "name": "api-curso",
-  "version": "1.0.0",
-  "dependencies": {
-    "aws-sdk": "^2.1547.0"
-  }
-}
