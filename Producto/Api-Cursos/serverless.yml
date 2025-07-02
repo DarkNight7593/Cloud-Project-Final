@@ -55,6 +55,10 @@ functions:
           path: /curso/eliminar
           method: delete
           cors: true
+package:
+individually: false
+include:
+  - '**/*.js'
 
 resources:
   Resources:
@@ -84,9 +88,5 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-  package:
-  individually: false
-  include:
-    - '**/*.js'
 
 

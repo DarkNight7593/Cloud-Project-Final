@@ -31,7 +31,11 @@ functions:
           path: /compra/listar
           method: get
           cors: true
-
+package:
+individually: false
+include:
+  - '**/*.js'
+  
 resources:
   Resources:
     TablaCompras:

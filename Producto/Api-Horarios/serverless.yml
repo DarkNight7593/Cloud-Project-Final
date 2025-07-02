@@ -52,7 +52,11 @@ functions:
           path: /curso/horario/eliminar
           method: delete
           cors: true
-
+package:
+individually: false
+include:
+  - '**/*.js'
+  
 resources:
   Resources:
     TablaHorario:
