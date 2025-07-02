@@ -30,7 +30,7 @@ def lambda_handler(event, context):
 
         # Si es instructor, validar token y rol
         if rol == 'instructor':
-            token = event.get('headers', {}).get('Authorization')
+            token = event['headers']['Authorization']
             payload_string = '{ "token": "' + token +  '" }'
             if not token:
                 return {
