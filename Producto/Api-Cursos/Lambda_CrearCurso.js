@@ -10,7 +10,7 @@ exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
     const data = JSON.parse(event.body);
-    const { tenant_id,nombre, descripcion, inicio, fin, precio } = data;
+    const { tenant_id,nombre, descripcion, inicio, fin, precio,dni } = data;
     if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
 
     const validar = await lambda.invoke({
