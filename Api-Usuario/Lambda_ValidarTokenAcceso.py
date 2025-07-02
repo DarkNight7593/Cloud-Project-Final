@@ -54,9 +54,6 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'body': json.dumps({
                 'message': 'Token válido',
-                'tenant_id': registro['tenant_id'],
-                'dni': registro['dni'],
-                "rol":registro['rol'],
                 'expires_at': expires_str
             })
         }

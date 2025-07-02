@@ -9,17 +9,13 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    if (!token) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Token no proporcionado' })
-      };
-    }
+    const { limit = 5, lastKey, dni_instructor,tenant_id } = event.queryStringParameters;
+    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
 
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
+      Payload: JSON.stringify({ token,tenant_id })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
@@ -30,8 +26,6 @@ exports.handler = async (event) => {
       };
     }
 
-    const { tenant_id } = validarPayload.body;
-    const { limit = 5, lastKey, dni_instructor } = event.queryStringParameters || {};
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
 
     let params;

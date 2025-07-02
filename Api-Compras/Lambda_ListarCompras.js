@@ -8,21 +8,18 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    if (!token)
-      return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
+    const { estado, curso_id, limit = 10, lastKey } = event.queryStringParameters || {};
+    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
 
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
+      Payload: JSON.stringify({ token,tenant_id })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403)
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
-
-    const { tenant_id, dni } = validarPayload.body;
-    const { estado, curso_id, limit = 10, lastKey } = event.queryStringParameters || {};
 
     if (!curso_id || !estado)
       return { statusCode: 400, body: JSON.stringify({ error: 'curso_id y estado requeridos' }) };

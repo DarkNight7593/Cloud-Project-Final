@@ -13,7 +13,6 @@ def hash_password(password):
 def lambda_handler(event, context):
     try:
         body = event['body']
-
         tenant_id = body['tenant_id']
         dni = body['dni']
         full_name = body['full_name']
@@ -27,42 +26,7 @@ def lambda_handler(event, context):
                     'error': 'Faltan tenant_id, dni, full_name o password'
                 })
             }
-
-        # Si es instructor, validar token y rol
-        if rol == 'instructor':
-            token = event['headers']['Authorization']
-            payload_string = '{ "token": "' + token +  '" }'
-            if not token:
-                return {
-                    'statusCode': 403,
-                    'body': json.dumps({'error': 'Token requerido para crear instructores'})
-                }
-
-            lambda_client = boto3.client('lambda')
-            validar_response = lambda_client.invoke(
-                FunctionName=os.environ['FUNCION_VALIDAR'],
-                InvocationType='RequestResponse',
-                Payload=payload_string
-            )
-            payload_bytes = validar_response['Payload'].read()
-            validar_payload = json.loads(payload_bytes)
-
-            if validar_payload.get('statusCode') != 200:
-                return {
-                    'statusCode': 403,
-                    'body': json.dumps({'error': 'Token inválido o expirado'})
-                }
-
-            datos_token = validar_payload.get('body', {})
-            if isinstance(datos_token, str):
-                datos_token = json.loads(datos_token)
-
-            if datos_token.get('rol') != 'admin':
-                return {
-                    'statusCode': 403,
-                    'body': json.dumps({'error': 'Solo administradores pueden crear instructores'})
-                }
-
+        
         # Hashear contraseña
         hashed_password = hash_password(password)
 

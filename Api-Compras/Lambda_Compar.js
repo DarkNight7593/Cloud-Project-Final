@@ -11,23 +11,19 @@ const FUNCION_BUSCAR_HORARIO = process.env.FUNCION_BUSCAR_HORARIO;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    if (!token)
-      return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
+    const { tenant_id,curso_id, horario_id, estado } = JSON.parse(event.body);
+    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
 
     // 1. Validar token
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
+      Payload: JSON.stringify({ token,tenant_id })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403)
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
-
-    const { tenant_id, dni } = validarPayload.body;
-
-    const { curso_id, horario_id, estado = "reservado" } = JSON.parse(event.body || '{}');
 
     if (!curso_id || !horario_id)
       return { statusCode: 400, body: JSON.stringify({ error: 'curso_id y horario_id son requeridos' }) };
@@ -38,7 +34,7 @@ exports.handler = async (event) => {
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { curso_id }
+        queryStringParameters: { curso_id,tenant_id }
       })
     }).promise();
 

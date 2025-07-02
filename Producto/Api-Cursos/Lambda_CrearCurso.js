@@ -9,22 +9,19 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    if (!token)
-      return { statusCode: 403, body: JSON.stringify({ error: 'Token no proporcionado' }) };
+    const data = JSON.parse(event.body);
+    const { tenant_id,nombre, descripcion, inicio, fin, precio } = data;
+    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
 
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
+      Payload: JSON.stringify({ token,tenant_id })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403)
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
-
-    const { tenant_id, dni } = validarPayload.body;
-    const data = JSON.parse(event.body);
-    const { nombre, descripcion, inicio, fin, precio } = data;
 
     if (!nombre || !descripcion)
       return { statusCode: 400, body: JSON.stringify({ error: 'Faltan campos obligatorios' }) };
