@@ -24,13 +24,13 @@ exports.handler = async (event) => {
     if (!curso_id || !estado)
       return { statusCode: 400, body: JSON.stringify({ error: 'curso_id y estado requeridos' }) };
 
-    const partitionKey = `${tenant_id}#${curso_id}`;
-    const sortKey = `${dni}#${estado}`;
+    const partitionKey = tenant_id+'#'+curso_id;
+    const sortKey = dni+'#'+estado;
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
 
     const params = {
       TableName: TABLE_COMPRAS,
-      KeyConditionExpression: 'tenant_id$curso_id = :partitionKey AND dni$estado = :sortKey',
+      KeyConditionExpression: 'tenant_id_curso_id = :partitionKey AND dni_estado = :sortKey',
       ExpressionAttributeValues: {
         ':partitionKey': partitionKey,
         ':sortKey': sortKey

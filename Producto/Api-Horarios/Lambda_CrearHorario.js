@@ -29,13 +29,13 @@ exports.handler = async (event) => {
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
-    const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
+    const tenant_id_curso_id = tenant_id+'#'+curso_id;
 
     // Obtener horarios existentes
     const scan = await dynamodb.query({
       TableName: TABLE_HORARIO,
-      KeyConditionExpression: 'tenant_id$curso_id = :pk',
-      ExpressionAttributeValues: { ':pk': tenant_id$curso_id }
+      KeyConditionExpression: 'tenant_id_curso_id = :pk',
+      ExpressionAttributeValues: { ':pk': tenant_id_curso_id }
     }).promise();
 
     const choque = scan.Items.find(h =>
@@ -50,7 +50,7 @@ exports.handler = async (event) => {
     await dynamodb.put({
       TableName: TABLE_HORARIO,
       Item: {
-        tenant_id$curso_id,
+        tenant_id_curso_id,
         horario_id,
         dias,
         inicio_hora,

@@ -16,9 +16,9 @@ exports.handler = async (event) => {
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
-    const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
+    const tenant_id_curso_id = tenant_id+'#'+curso_id;
 
-    await dynamodb.delete({ TableName: TABLE_HORARIO, Key: { tenant_id$curso_id, horario_id } }).promise();
+    await dynamodb.delete({ TableName: TABLE_HORARIO, Key: { tenant_id_curso_id, horario_id } }).promise();
 
     return { statusCode: 200, body: JSON.stringify({ message: 'Horario eliminado' }) };
 

@@ -22,11 +22,11 @@ exports.handler = async (event) => {
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
-    const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
+    const tenant_id$curso_id = tenant_id+'#'+curso_id;
 
     const scan = await dynamodb.query({
       TableName: TABLE_HORARIO,
-      KeyConditionExpression: 'tenant_id$curso_id = :pk',
+      KeyConditionExpression: 'tenant_id_curso_id = :pk',
       ExpressionAttributeValues: { ':pk': tenant_id$curso_id }
     }).promise();
 

@@ -14,9 +14,9 @@ exports.handler = async (event) => {
     const validar = await lambda.invoke({ FunctionName: FUNCION_VALIDAR, InvocationType: 'RequestResponse', Payload: JSON.stringify({ token,tenant_id }) }).promise();
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
-    const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
+    const tenant_id_curso_id = tenant_id+'#'+curso_id;
 
-    const result = await dynamodb.get({ TableName: TABLE_HORARIO, Key: { tenant_id$curso_id, horario_id } }).promise();
+    const result = await dynamodb.get({ TableName: TABLE_HORARIO, Key: { tenant_id_curso_id, horario_id } }).promise();
 
     if (!result.Item) return { statusCode: 404, body: JSON.stringify({ error: 'Horario no encontrado' }) };
     return { statusCode: 200, body: JSON.stringify(result.Item) };

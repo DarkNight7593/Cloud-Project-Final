@@ -43,13 +43,13 @@ resources:
       Properties:
         TableName: ${sls:stage}-t_compras
         AttributeDefinitions:
-          - AttributeName: tenant_id$curso_id
+          - AttributeName: tenant_id_curso_id
             AttributeType: S
-          - AttributeName: dni$estado
+          - AttributeName: dni_estado
             AttributeType: S
         KeySchema:
-          - AttributeName: tenant_id$curso_id
+          - AttributeName: tenant_id_curso_id
             KeyType: HASH
-          - AttributeName: dni$estado
+          - AttributeName: dni_estado
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST

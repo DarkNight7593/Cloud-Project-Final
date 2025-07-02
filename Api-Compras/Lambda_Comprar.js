@@ -11,7 +11,7 @@ const FUNCION_BUSCAR_HORARIO = process.env.FUNCION_BUSCAR_HORARIO;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id,curso_id, horario_id, estado } = JSON.parse(event.body);
+    const { tenant_id,curso_id, horario_id, estado,dni } = JSON.parse(event.body);
     if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
 
     // 1. Validar token
@@ -48,7 +48,7 @@ exports.handler = async (event) => {
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { curso_id, horario_id }
+        queryStringParameters: { tenant_id,curso_id, horario_id }
       })
     }).promise();
 
@@ -57,8 +57,8 @@ exports.handler = async (event) => {
       return { statusCode: 404, body: JSON.stringify({ error: 'Horario no encontrado' }) };
 
     // 4. Registrar compra
-    const partitionKey = `${tenant_id}#${curso_id}`;
-    const sortKey = `${dni}$${estado}`;
+    const partitionKey = tenant_id+'#'+curso_id;
+    const sortKey = dni+'#'+estado;
 
     const { nombre: curso_nombre, instructor_dni } = cursoPayload;
     const { dias, inicio_hora, fin_hora } = horarioPayload;
@@ -74,8 +74,8 @@ exports.handler = async (event) => {
     await dynamodb.put({
     TableName: TABLE_COMPRAS,
     Item: {
-        tenant_id$curso_id: partitionKey,
-        dni$estado: sortKey,
+        tenant_id_curso_id: partitionKey,
+        dni_estado: sortKey,
         curso_id,
         horario_id,
         dni,
