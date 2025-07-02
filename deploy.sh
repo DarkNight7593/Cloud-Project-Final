@@ -29,6 +29,7 @@ deploy_node_service() {
     sls deploy 
 
     cd ..
+    cd ..
 }
 
 # Desplegar servicios en orden
