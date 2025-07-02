@@ -12,46 +12,86 @@ def hash_password(password):
 
 def lambda_handler(event, context):
     try:
+        # Parsear body si es string
+        if isinstance(event['body'], str):
+            event['body'] = json.loads(event['body'])
+
         body = event['body']
         tenant_id = body['tenant_id']
         dni = body['dni']
         full_name = body['full_name']
         password = body['password']
-        rol = body['rol'].lower()  # 'cliente', 'instructor', 'admin'
+        rol = body['rol'].lower()
 
-        if not all([tenant_id, dni, full_name, password]):
+        if not all([tenant_id, dni, full_name, password, rol]):
             return {
                 'statusCode': 400,
-                'body': json.dumps({
-                    'error': 'Faltan tenant_id, dni, full_name o password'
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': 'Faltan tenant_id, dni, full_name, password o rol'})
+            }
+
+        # Validar token si se va a crear un instructor
+        if rol == "instructor":
+            if 'headers' not in event or 'Authorization' not in event['headers']:
+                return {
+                    'statusCode': 403,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Token requerido para crear un instructor'})
+                }
+
+            token = event['headers']['Authorization']
+            lambda_client = boto3.client('lambda')
+            FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
+
+            validacion = lambda_client.invoke(
+                FunctionName=FUNCION_VALIDAR,
+                InvocationType='RequestResponse',
+                Payload=json.dumps({
+                    'body': {
+                        'token': token,
+                        'tenant_id': tenant_id
+                    }
                 })
-            }
-        
-        # Hashear contraseña
+            )
+
+            payload = json.loads(validacion['Payload'].read())
+            if payload['statusCode'] != 200:
+                return {
+                    'statusCode': 403,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Token inválido o expirado'})
+                }
+
+            usuario_autenticado = json.loads(payload['body'])
+            if usuario_autenticado['rol'] != 'admin':
+                return {
+                    'statusCode': 403,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Solo administradores pueden crear instructores'})
+                }
+
+        # Hashear y guardar
         hashed_password = hash_password(password)
+        tabla = boto3.resource('dynamodb').Table(os.environ["TABLE_USER"])
 
-        # Insertar en DynamoDB
-        nombre_tabla = os.environ["TABLE_USER"]
-        dynamodb = boto3.resource('dynamodb')
-        t_usuarios = dynamodb.Table(nombre_tabla)
+        tabla.put_item(Item={
+            'tenant_id': tenant_id,
+            'dni': dni,
+            'full_name': full_name,
+            'rol': rol,
+            'password': hashed_password
+        })
 
-        t_usuarios.put_item(
-            Item={
-                'tenant_id': tenant_id,
-                'dni': dni,
-                'full_name': full_name,
-                'rol': rol,
-                'password': hashed_password
-            }
-        )
-
-        logger.info(f"Usuario registrado: {dni} - {tenant_id}")
+        logger.info(f"Usuario registrado: {dni} ({rol}) en {tenant_id}")
 
         return {
             'statusCode': 200,
+            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({
                 'message': 'Usuario registrado exitosamente',
-                'nombre': full_name
+                'dni': dni,
+                'full_name': full_name,
+                'rol': rol
             })
         }
 
@@ -59,18 +99,17 @@ def lambda_handler(event, context):
         logger.warning(f"Campo faltante: {str(e)}")
         return {
             'statusCode': 400,
-            'body': json.dumps({
-                'error': f"Falta el campo requerido: {str(e)}"
-            })
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({'error': f"Falta el campo requerido: {str(e)}"})
         }
+
     except Exception as e:
         logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
+            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({
                 'error': 'Error interno del servidor',
                 'detalle': str(e)
             })
         }
-
-

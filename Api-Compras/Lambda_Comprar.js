@@ -3,7 +3,6 @@ const dynamodb = new AWS.DynamoDB.DocumentClient();
 const lambda = new AWS.Lambda();
 
 const TABLE_COMPRAS = process.env.TABLE_COMPRAS;
-const TABLE_USUARIO = process.env.TABLE_USUARIO;
 const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 const FUNCION_BUSCAR_CURSO = process.env.FUNCION_BUSCAR_CURSO;
 const FUNCION_BUSCAR_HORARIO = process.env.FUNCION_BUSCAR_HORARIO;
@@ -11,89 +10,133 @@ const FUNCION_BUSCAR_HORARIO = process.env.FUNCION_BUSCAR_HORARIO;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id,curso_id, horario_id, estado,dni } = JSON.parse(event.body);
-    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
+    const { tenant_id, curso_id, horario_id, estado } = JSON.parse(event.body);
+
+    if (!token || !tenant_id) {
+      return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
+    }
 
     // 1. Validar token
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token,tenant_id })
+      Payload: JSON.stringify({ token, tenant_id })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403)
+    if (validarPayload.statusCode === 403) {
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
+    }
 
-    if (!curso_id || !horario_id)
-      return { statusCode: 400, body: JSON.stringify({ error: 'curso_id y horario_id son requeridos' }) };
+    const rol = validarPayload.rol;
+    const dni = validarPayload.dni;
 
-    // 2. Validar curso existente
+    if (rol !== 'alumno') {
+      return { statusCode: 403, body: JSON.stringify({ error: 'Solo los alumnos pueden registrar compras' }) };
+    }
+
+    if (!curso_id || !horario_id || !estado || !['reservado', 'inscrito'].includes(estado)) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Datos incompletos o estado inválido' }) };
+    }
+
+    // 2. Validar curso
     const cursoResult = await lambda.invoke({
       FunctionName: FUNCION_BUSCAR_CURSO,
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { curso_id,tenant_id }
+        queryStringParameters: { curso_id, tenant_id }
       })
     }).promise();
 
     const cursoPayload = JSON.parse(cursoResult.Payload);
-    if (cursoPayload.statusCode !== 200)
+    if (cursoPayload.statusCode !== 200) {
       return { statusCode: 404, body: JSON.stringify({ error: 'Curso no encontrado' }) };
+    }
 
-    // 3. Validar horario existente
+    // 3. Validar horario
     const horarioResult = await lambda.invoke({
       FunctionName: FUNCION_BUSCAR_HORARIO,
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { tenant_id,curso_id, horario_id }
+        queryStringParameters: { tenant_id, curso_id, horario_id }
       })
     }).promise();
 
     const horarioPayload = JSON.parse(horarioResult.Payload);
-    if (horarioPayload.statusCode !== 200)
+    if (horarioPayload.statusCode !== 200) {
       return { statusCode: 404, body: JSON.stringify({ error: 'Horario no encontrado' }) };
+    }
 
-    // 4. Registrar compra
-    const partitionKey = tenant_id+'#'+curso_id;
-    const sortKey = dni+'#'+estado;
+    const partitionKey = `${tenant_id}#${curso_id}`;
+    const keyInscrito = `${dni}#inscrito`;
+    const keyReservado = `${dni}#reservado`;
 
-    const { nombre: curso_nombre, instructor_dni } = cursoPayload;
-    const { dias, inicio_hora, fin_hora } = horarioPayload;
-
-    // Obtener nombre del instructor (por si no está en el cursoPayload)
-    const userResult = await dynamodb.get({
-    TableName: TABLE_USUARIO,
-    Key: { tenant_id, dni: instructor_dni }
+    // 4. Buscar estado actual del alumno
+    const existing = await dynamodb.query({
+      TableName: TABLE_COMPRAS,
+      KeyConditionExpression: 'tenant_id_curso_id = :pk AND begins_with(dni_estado, :dni)',
+      ExpressionAttributeValues: {
+        ':pk': partitionKey,
+        ':dni': dni
+      }
     }).promise();
 
-    const instructor_nombre = userResult.Item?.full_name || instructor_dni;
+    const yaInscrito = existing.Items.find(e => e.dni_estado.endsWith('#inscrito'));
+    const yaReservado = existing.Items.find(e => e.dni_estado.endsWith('#reservado'));
+
+    if (estado === 'inscrito') {
+      if (yaInscrito) {
+        return { statusCode: 409, body: JSON.stringify({ error: 'Ya estás inscrito en este curso' }) };
+      }
+
+      if (yaReservado) {
+        // Eliminar reserva
+        await dynamodb.delete({
+          TableName: TABLE_COMPRAS,
+          Key: {
+            tenant_id_curso_id: partitionKey,
+            dni_estado: keyReservado
+          }
+        }).promise();
+      }
+
+    } else if (estado === 'reservado') {
+      if (yaInscrito) {
+        return { statusCode: 409, body: JSON.stringify({ error: 'Ya estás inscrito, no puedes reservar nuevamente' }) };
+      }
+
+      if (yaReservado) {
+        return { statusCode: 409, body: JSON.stringify({ error: 'Ya has reservado este curso' }) };
+      }
+    }
+
+    // 5. Registrar compra
+    const { nombre: curso_nombre, instructor_dni, instructor_nombre } = cursoPayload;
+    const { dias, inicio_hora, fin_hora } = horarioPayload;
 
     await dynamodb.put({
-    TableName: TABLE_COMPRAS,
-    Item: {
+      TableName: TABLE_COMPRAS,
+      Item: {
         tenant_id_curso_id: partitionKey,
-        dni_estado: sortKey,
+        dni_estado: `${dni}#${estado}`,
         curso_id,
         horario_id,
         dni,
         estado,
-        timestamp: new Date().toISOString(),
-
-        // Campos que necesitas para mostrar en frontend
         curso_nombre,
+        instructor_dni,
         instructor_nombre,
         dias,
         inicio_hora,
         fin_hora
-    }
+      }
     }).promise();
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Compra registrada con éxito', curso_id, horario_id, estado })
+      body: JSON.stringify({ message: 'Compra registrada exitosamente', estado })
     };
 
   } catch (error) {
@@ -104,3 +147,4 @@ exports.handler = async (event) => {
     };
   }
 };
+

@@ -3,13 +3,14 @@ service: api-compras
 
 provider:
   name: aws
-  runtime: nodejs20.x
+  runtime: nodejs22.x
   memorySize: 1024
   timeout: 30
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
     TABLE_CURSO: ${sls:stage}-t_curso
+    TABLE_USUARIO: ${sls:stage}-t_usuario
     TABLE_COMPRAS: ${sls:stage}-t_compras
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
     FUNCION_BUSCAR_CURSO: api-curso-${sls:stage}-obtenerCurso

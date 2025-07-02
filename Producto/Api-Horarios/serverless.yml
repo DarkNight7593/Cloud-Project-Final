@@ -3,12 +3,13 @@ service: api-horario
 
 provider:
   name: aws
-  runtime: nodejs20.x
+  runtime: nodejs22.x
   memorySize: 1024
   timeout: 30
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
+    FUNCION_CURSO: api-curso-${sls:stage}-obtenerCurso
     TABLE_HORARIO: ${sls:stage}-t_horario
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
 
@@ -17,7 +18,7 @@ functions:
     handler: Lambda_CrearHorario.handler
     events:
       - http:
-          path: /curso/horario/crear
+          path: /horario/crear
           method: post
           cors: true
 
@@ -25,7 +26,7 @@ functions:
     handler: Lambda_ListarHorario.handler
     events:
       - http:
-          path: /curso/horario/listar
+          path: /horario/listar
           method: get
           cors: true
 
@@ -33,7 +34,7 @@ functions:
     handler: Lambda_BuscarHorario.handler
     events:
       - http:
-          path: /curso/horario/buscar
+          path: /horario/buscar
           method: get
           cors: true
 
@@ -41,7 +42,7 @@ functions:
     handler: Lambda_ModiHorario.handler
     events:
       - http:
-          path: /curso/horario/modificar
+          path: horario/modificar
           method: put
           cors: true
 
@@ -49,7 +50,7 @@ functions:
     handler: Lambda_EliminarHorario.handler
     events:
       - http:
-          path: /curso/horario/eliminar
+          path: horario/eliminar
           method: delete
           cors: true
 package:

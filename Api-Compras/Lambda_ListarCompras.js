@@ -8,48 +8,85 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { estado, curso_id, limit = 10, lastKey } = event.queryStringParameters || {};
-    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
+    const { tenant_id, curso_id, estado, limit = 10, lastKey } = event.queryStringParameters || {};
 
+    if (!token || !tenant_id || !curso_id || !estado) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Se requieren token, tenant_id, curso_id y estado' })
+      };
+    }
+
+    // Validar token
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token,tenant_id })
+      Payload: JSON.stringify({ token })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403)
+    if (validarPayload.statusCode === 403) {
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
+    }
 
-    if (!curso_id || !estado)
-      return { statusCode: 400, body: JSON.stringify({ error: 'curso_id y estado requeridos' }) };
-
-    const partitionKey = tenant_id+'#'+curso_id;
-    const sortKey = dni+'#'+estado;
+    const rol = validarPayload.rol;
+    const dni = validarPayload.dni;
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
+    const partitionKey = `${tenant_id}#${curso_id}`;
 
-    const params = {
-      TableName: TABLE_COMPRAS,
-      KeyConditionExpression: 'tenant_id_curso_id = :partitionKey AND dni_estado = :sortKey',
-      ExpressionAttributeValues: {
-        ':partitionKey': partitionKey,
-        ':sortKey': sortKey
-      },
-      Limit: parseInt(limit),
-      ExclusiveStartKey: decodedLastKey
-    };
+    let params;
 
-    const result = await dynamodb.query(params).promise();
+    if (rol === 'alumno') {
+      // Solo puede ver sus propias compras
+      const sortKey = `${dni}#${estado}`;
+      params = {
+        TableName: TABLE_COMPRAS,
+        KeyConditionExpression: 'tenant_id_curso_id = :pk AND dni_estado = :sk',
+        ExpressionAttributeValues: {
+          ':pk': partitionKey,
+          ':sk': sortKey
+        },
+        Limit: parseInt(limit),
+        ExclusiveStartKey: decodedLastKey
+      };
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        compras: result.Items,
-        lastKey: result.LastEvaluatedKey
-          ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
-          : null
-      })
-    };
+      const result = await dynamodb.query(params).promise();
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          compras: result.Items,
+          lastKey: result.LastEvaluatedKey
+            ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+            : null
+        })
+      };
+
+    } else {
+      // Admin u otro rol: puede ver todos los del curso con ese estado
+      params = {
+        TableName: TABLE_COMPRAS,
+        FilterExpression: 'tenant_id_curso_id = :pk AND contains(dni_estado, :estado)',
+        ExpressionAttributeValues: {
+          ':pk': partitionKey,
+          ':estado': `#${estado}`
+        },
+        Limit: parseInt(limit),
+        ExclusiveStartKey: decodedLastKey
+      };
+
+      const result = await dynamodb.scan(params).promise();
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          compras: result.Items,
+          lastKey: result.LastEvaluatedKey
+            ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+            : null
+        })
+      };
+    }
 
   } catch (error) {
     console.error('Error en listar compras:', error);
@@ -59,3 +96,4 @@ exports.handler = async (event) => {
     };
   }
 };
+

@@ -3,35 +3,41 @@ const dynamodb = new AWS.DynamoDB.DocumentClient();
 const lambda = new AWS.Lambda();
 
 const TABLE_CURSO = process.env.TABLE_CURSO;
-const TABLE_USUARIO = process.env.TABLE_USUARIO;
 const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { limit = 5, lastKey, dni_instructor,tenant_id } = event.queryStringParameters;
-    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
+    const { limit = 5, lastKey, dni_instructor, tenant_id } = event.queryStringParameters || {};
 
+    if (!token || !tenant_id) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+      };
+    }
+
+    // Validar token
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token,tenant_id })
+      Payload: JSON.stringify({ body: { token, tenant_id } })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403) {
+    if (validarPayload.statusCode !== 200) {
       return {
         statusCode: 403,
         body: JSON.stringify({ error: 'Token inválido o expirado' })
       };
     }
 
+    // Parsear lastKey para paginación
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
 
+    // Construir parámetros de consulta
     let params;
-
     if (dni_instructor) {
-      // Usamos el GSI tenant_instructor_index
       params = {
         TableName: TABLE_CURSO,
         IndexName: 'tenant_instructor_index',
@@ -44,7 +50,6 @@ exports.handler = async (event) => {
         ExclusiveStartKey: decodedLastKey
       };
     } else {
-      // Consulta normal por tenant_id
       params = {
         TableName: TABLE_CURSO,
         KeyConditionExpression: 'tenant_id = :tenant_id',
@@ -58,37 +63,29 @@ exports.handler = async (event) => {
 
     const result = await dynamodb.query(params).promise();
 
-    const cursosConNombres = await Promise.all(result.Items.map(async (curso) => {
-      const userParams = {
-        TableName: TABLE_USUARIO,
-        Key: {
-          tenant_id,
-          dni: curso.instructor_dni
-        }
-      };
-      const userResult = await dynamodb.get(userParams).promise();
-      const nombreInstructor = userResult.Item?.nombre || curso.instructor_dni;
-
-      return {
-        ...curso,
-        instructor_nombre: nombreInstructor
-      };
-    }));
-
     return {
       statusCode: 200,
       body: JSON.stringify({
-        cursos: cursosConNombres,
-        lastKey: result.LastEvaluatedKey ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey)) : null
+        cursos: result.Items,
+        paginacion: {
+          siguienteToken: result.LastEvaluatedKey
+            ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+            : null,
+          total: result.Items.length
+        }
       })
     };
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error al listar cursos:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({
+        error: 'Error interno del servidor',
+        detalle: error.message
+      })
     };
   }
 };
+
 

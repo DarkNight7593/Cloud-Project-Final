@@ -8,19 +8,64 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id,curso_id, horario_id } = event.queryStringParameters;
-    if (!token || !tenant_id) return { statusCode: 403, body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' }) };
+    const { tenant_id, curso_id, horario_id } = event.queryStringParameters || {};
 
-    const validar = await lambda.invoke({ FunctionName: FUNCION_VALIDAR, InvocationType: 'RequestResponse', Payload: JSON.stringify({ token,tenant_id }) }).promise();
+    // Validación inicial
+    if (!token || !tenant_id) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+      };
+    }
+
+    if (!curso_id || !horario_id) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'curso_id y horario_id son requeridos' })
+      };
+    }
+
+    // Validar el token con la función externa
+    const validar = await lambda.invoke({
+      FunctionName: FUNCION_VALIDAR,
+      InvocationType: 'RequestResponse',
+      Payload: JSON.stringify({ token, tenant_id })
+    }).promise();
+
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
+    if (validarPayload.statusCode === 403) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: 'Token inválido o expirado' })
+      };
+    }
+
     const tenant_id_curso_id = tenant_id+'#'+curso_id;
 
-    const result = await dynamodb.get({ TableName: TABLE_HORARIO, Key: { tenant_id_curso_id, horario_id } }).promise();
+    // Obtener el horario
+    const result = await dynamodb.get({
+      TableName: TABLE_HORARIO,
+      Key: { tenant_id_curso_id, horario_id }
+    }).promise();
 
-    if (!result.Item) return { statusCode: 404, body: JSON.stringify({ error: 'Horario no encontrado' }) };
-    return { statusCode: 200, body: JSON.stringify(result.Item) };
+    if (!result.Item) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Horario no encontrado' })
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result.Item)
+    };
+
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+    console.error('Error al obtener el horario:', e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Error interno del servidor', detalle: e.message })
+    };
   }
 };
+
