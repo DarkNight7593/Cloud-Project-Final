@@ -84,4 +84,9 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+  package:
+  individually: false
+  include:
+    - '**/*.js'
+
 
