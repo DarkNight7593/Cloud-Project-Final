@@ -15,7 +15,7 @@ exports.handler = async (event) => {
     if (validarPayload.statusCode === 403) return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
 
     const { tenant_id } = validarPayload.body;
-    const { curso_id, limit = 5, lastKey } = event.queryStringParameters;
+    const { curso_id, limit = 5, lastKey } = event.queryStringParameters || {};
     const tenant_id$curso_id = `${tenant_id}#${curso_id}`;
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
 

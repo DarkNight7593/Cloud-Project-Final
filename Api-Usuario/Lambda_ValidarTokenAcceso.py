@@ -1,16 +1,25 @@
 import boto3
 from datetime import datetime
 import os
+import json
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        token = event.get('token')
-        tenant_id = event.get('tenant_id')
+        # Asegurar que el body esté parseado
+        if isinstance(event['body'], str):
+            event['body'] = json.loads(event['body'])
+
+        token = event['body']['token']
+        tenant_id = event['body']['tenant_id']
 
         if not token or not tenant_id:
             return {
                 'statusCode': 400,
-                'body': {'error': 'Missing token or tenant_id'}
+                'body': json.dumps({'error': 'Faltan token o tenant_id'})
             }
 
         nombre_tabla_tokens = os.environ["TABLE_TOKEN"]
@@ -27,32 +36,41 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 403,
-                'body': {'error': 'Token no existe o es inválido'}
+                'body': json.dumps({'error': 'Token no existe o es inválido'})
             }
 
         registro = response['Item']
-        expires = registro['expires_at']
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        expires_str = registro['expires_at']
+        expires = datetime.strptime(expires_str, '%Y-%m-%d %H:%M:%S')
+        now = datetime.now()
 
         if now > expires:
             return {
                 'statusCode': 403,
-                'body': {'error': 'Token expirado'}
+                'body': json.dumps({'error': 'Token expirado'})
             }
 
         return {
             'statusCode': 200,
-            'body': {
+            'body': json.dumps({
                 'message': 'Token válido',
-                'tenant_id': registro.get('tenant_id'),
-                'dni': registro.get('dni'),
-                'expires_at': expires
-            }
+                'tenant_id': registro['tenant_id'],
+                'dni': registro['dni'],
+                "rol":registro['rol'],
+                'expires_at': expires_str
+            })
+        }
+
+    except KeyError as e:
+        logger.warning(f"Campo faltante: {str(e)}")
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': f'Falta el campo requerido: {str(e)}'})
         }
 
     except Exception as e:
-        print("Error:", str(e))
+        logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
-            'body': {'error': str(e)}
+            'body': json.dumps({'error': str(e)})
         }

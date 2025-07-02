@@ -7,11 +7,12 @@ provider:
   memorySize: 1024
   timeout: 30
   iam:
-    role: arn:aws:iam::674438223832:role/LabRole
+    role: arn:aws:iam::752087942362:role/LabRole
   environment:
     TABLE_USER: ${sls:stage}-t_usuario
     TABLE_TOKEN: ${sls:stage}-t_token
     TABLE_ORG: ${sls:stage}-t_org
+    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
 
 functions:
   crear:

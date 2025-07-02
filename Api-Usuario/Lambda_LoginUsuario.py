@@ -2,21 +2,30 @@ import boto3
 import hashlib
 import uuid
 import os
+import json
+import logging
 from datetime import datetime, timedelta
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def lambda_handler(event, context):
     try:
-        tenant_id = event.get('tenant_id')
-        dni = event.get('dni')
-        password = event.get('password')
+        # Parsear body si es string
+        if isinstance(event['body'], str):
+            event['body'] = json.loads(event['body'])
+
+        tenant_id = event['body']['tenant_id']
+        dni = event['body']['dni']
+        password = event['body']['password']
 
         if not all([tenant_id, dni, password]):
             return {
                 'statusCode': 400,
-                'body': {'error': 'Missing tenant_id, dni, or password'}
+                'body': json.dumps({'error': 'Faltan tenant_id, dni o password'})
             }
 
         hashed_password = hash_password(password)
@@ -25,8 +34,8 @@ def lambda_handler(event, context):
         nombre_tabla_tokens = os.environ["TABLE_TOKEN"]
 
         dynamodb = boto3.resource('dynamodb')
-
         t_usuarios = dynamodb.Table(nombre_tabla_usuarios)
+
         response = t_usuarios.get_item(
             Key={
                 'tenant_id': tenant_id,
@@ -37,16 +46,18 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 403,
-                'body': {'error': 'Usuario no existe'}
+                'body': json.dumps({'error': 'Usuario no existe'})
             }
 
         usuario = response['Item']
+
         if usuario['password'] != hashed_password:
             return {
                 'statusCode': 403,
-                'body': {'error': 'Password incorrecto'}
+                'body': json.dumps({'error': 'Password incorrecto'})
             }
 
+        # Generar token y guardar en DynamoDB
         token = str(uuid.uuid4())
         expiracion = datetime.now() + timedelta(hours=1)
 
@@ -60,19 +71,28 @@ def lambda_handler(event, context):
             }
         )
 
+        logger.info(f"Login exitoso para {dni} en {tenant_id}")
+
         return {
             'statusCode': 200,
-            'body': {
+            'body': json.dumps({
                 'message': 'Login exitoso',
                 'token': token,
                 'expires_at': expiracion.strftime('%Y-%m-%d %H:%M:%S')
-            }
+            })
         }
 
+    except KeyError as e:
+        logger.warning(f"Campo faltante: {str(e)}")
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': f'Falta el campo requerido: {str(e)}'})
+        }
     except Exception as e:
-        print("Error:", str(e))
+        logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
-            'body': {'error': str(e)}
+            'body': json.dumps({'error': str(e)})
         }
+
 
