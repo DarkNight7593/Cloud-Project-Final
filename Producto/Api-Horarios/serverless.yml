@@ -53,10 +53,10 @@ functions:
           method: delete
           cors: true
 package:
-individually: false
-include:
-  - '**/*.js'
-  
+  individually: false
+  include:
+    - '**/*.js'
+
 resources:
   Resources:
     TablaHorario:
