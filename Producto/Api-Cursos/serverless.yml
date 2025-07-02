@@ -3,7 +3,7 @@ service: api-curso
 
 provider:
   name: aws
-  runtime: nodejs20.x
+  runtime: nodejs16.x
   memorySize: 1024
   timeout: 30
   iam:
