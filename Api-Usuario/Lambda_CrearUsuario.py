@@ -31,6 +31,7 @@ def lambda_handler(event, context):
         # Si es instructor, validar token y rol
         if rol == 'instructor':
             token = event.get('headers', {}).get('Authorization')
+            token = '"' + token +  '"'
             if not token:
                 return {
                     'statusCode': 403,
