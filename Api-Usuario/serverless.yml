@@ -31,6 +31,16 @@ functions:
           method: post
           cors: true
           integration: lambda
+
+  logout:
+    handler: Lambda_Logout.lambda_handler
+    events:
+      - http:
+          path: /usuario/logout
+          method: post
+          cors: true
+          integration: lambda
+
   validar:
     handler: Lambda_ValidarTokenAcceso.lambda_handler
     events:
@@ -39,6 +49,16 @@ functions:
           method: post
           cors: true
           integration: lambda
+
+  listar:
+    handler: Lambda_ListarUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/listar
+          method: post
+          cors: true
+          integration: lambda
+          
 resources:
   Resources:
     TablaUsuarios:
@@ -46,12 +66,12 @@ resources:
       Properties:
         TableName: ${sls:stage}-t_usuario
         AttributeDefinitions:
-          - AttributeName: tenant_id
+          - AttributeName: tenant_id_rol
             AttributeType: S
           - AttributeName: dni
             AttributeType: S
         KeySchema:
-          - AttributeName: tenant_id
+          - AttributeName: tenant_id_rol
             KeyType: HASH
           - AttributeName: dni
             KeyType: RANGE

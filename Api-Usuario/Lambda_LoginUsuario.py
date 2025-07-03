@@ -14,22 +14,23 @@ def hash_password(password):
 
 def lambda_handler(event, context):
     try:
-        # Asegurar que el body esté parseado
         if isinstance(event['body'], str):
             event['body'] = json.loads(event['body'])
 
-        # Acceso directo como indicaste
-        tenant_id = event['body']['tenant_id']
-        dni = event['body']['dni']
-        password = event['body']['password']
+        body = event['body']
+        tenant_id = body.get('tenant_id')
+        dni = body.get('dni')
+        password = body.get('password')
+        rol = body.get('rol', '').lower()  # nuevo: se requiere rol para construir la key
 
-        if not tenant_id or not dni or not password:
+        if not all([tenant_id, dni, password, rol]):
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Faltan tenant_id, dni o password'})
+                'body': json.dumps({'error': 'Faltan tenant_id, dni, password o rol'})
             }
 
+        tenant_id_rol = f"{tenant_id}#{rol}"
         hashed_password = hash_password(password)
 
         dynamodb = boto3.resource('dynamodb')
@@ -37,14 +38,17 @@ def lambda_handler(event, context):
         t_tokens = dynamodb.Table(os.environ["TABLE_TOKEN"])
 
         response = t_usuarios.get_item(
-            Key={'tenant_id': tenant_id, 'dni': dni}
+            Key={
+                'tenant_id_rol': tenant_id_rol,
+                'dni': dni
+            }
         )
 
         if 'Item' not in response:
             return {
                 'statusCode': 403,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Usuario no existe'})
+                'body': json.dumps({'error': 'Usuario no existe o rol incorrecto'})
             }
 
         usuario = response['Item']
@@ -55,14 +59,12 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Password incorrecto'})
             }
 
-        # Generar token y guardar con expiración UTC
         token = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
         expiracion = now + timedelta(hours=1)
-        expiracion_str = expiracion.strftime('%Y-%m-%dT%H:%M:%SZ')  # formato ISO UTC
+        expiracion_str = expiracion.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         full_name = usuario.get('full_name', '')
-        rol = usuario.get('rol', '')
 
         t_tokens.put_item(
             Item={
@@ -75,7 +77,7 @@ def lambda_handler(event, context):
             }
         )
 
-        logger.info(f"Login exitoso para {dni} en {tenant_id}")
+        logger.info(f"Login exitoso para {dni} en {tenant_id} con rol {rol}")
 
         return {
             'statusCode': 200,
@@ -83,10 +85,7 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'message': 'Login exitoso',
                 'token': token,
-                'expires_at': expiracion_str,
-                'dni': dni,
-                'full_name': full_name,
-                'rol': rol
+                'expires_at': expiracion_str
             })
         }
 
@@ -105,3 +104,4 @@ def lambda_handler(event, context):
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'error': str(e)})
         }
+

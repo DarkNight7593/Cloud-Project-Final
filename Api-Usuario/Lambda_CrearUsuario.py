@@ -30,19 +30,34 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Faltan tenant_id, dni, full_name, password o rol'})
             }
 
-        # Validar token si se va a crear un instructor
+        tabla = boto3.resource('dynamodb').Table(os.environ["TABLE_USER"])
+        tenant_id_rol = f"{tenant_id}#{rol}"
+
+        # 1️⃣ Si se está creando un admin, validar que no exista otro admin en ese tenant
+        if rol == "admin":
+            resp = tabla.query(
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('tenant_id_rol').eq(tenant_id_rol),
+                Limit=1
+            )
+            if resp.get('Items'):
+                return {
+                    'statusCode': 409,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Ya existe un administrador registrado para este tenant'})
+                }
+
+        # 2️⃣ Si se está creando un instructor, validar el token (debe ser admin)
         if rol == "instructor":
-            if 'headers' not in event or 'Authorization' not in event['headers']:
+            token = event.get('headers', {}).get('Authorization')
+            if not token:
                 return {
                     'statusCode': 403,
                     'headers': {'Content-Type': 'application/json'},
                     'body': json.dumps({'error': 'Token requerido para crear un instructor'})
                 }
 
-            token = event['headers']['Authorization']
             lambda_client = boto3.client('lambda')
             FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
-
             validacion = lambda_client.invoke(
                 FunctionName=FUNCION_VALIDAR,
                 InvocationType='RequestResponse',
@@ -53,29 +68,26 @@ def lambda_handler(event, context):
                     }
                 })
             )
-
             payload = json.loads(validacion['Payload'].read())
-            if payload['statusCode'] != 200:
+            if payload.get('statusCode') != 200:
                 return {
                     'statusCode': 403,
                     'headers': {'Content-Type': 'application/json'},
                     'body': json.dumps({'error': 'Token inválido o expirado'})
                 }
 
-            usuario_autenticado = json.loads(payload['body'])
-            if usuario_autenticado['rol'] != 'admin':
+            usuario_autenticado = json.loads(payload['body']) if isinstance(payload['body'], str) else payload['body']
+            if usuario_autenticado.get('rol') != 'admin':
                 return {
                     'statusCode': 403,
                     'headers': {'Content-Type': 'application/json'},
                     'body': json.dumps({'error': 'Solo administradores pueden crear instructores'})
                 }
 
-        # Hashear y guardar
+        # 3️⃣ Crear usuario
         hashed_password = hash_password(password)
-        tabla = boto3.resource('dynamodb').Table(os.environ["TABLE_USER"])
-
         tabla.put_item(Item={
-            'tenant_id': tenant_id,
+            'tenant_id_rol': tenant_id_rol,
             'dni': dni,
             'full_name': full_name,
             'rol': rol,
