@@ -71,8 +71,6 @@ resources:
             AttributeType: S
           - AttributeName: curso_id
             AttributeType: S
-          - AttributeName: instructor_dni
-            AttributeType: S
           - AttributeName: tenant_instructor
             AttributeType: S
         KeySchema:
