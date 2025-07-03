@@ -84,7 +84,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           compras: result.Items,
           paginacion: {
-            siguienteCursoId: result.Items.length > 0
+            ultimoCursoId: result.Items.length > 0
               ? result.Items[result.Items.length - 1].curso_id
               : null,
             total: result.Items.length
@@ -117,7 +117,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           compras: result.Items,
           paginacion: {
-            siguienteAlumnoDni: result.Items.length > 0
+            ultimoAlumnoDni: result.Items.length > 0
               ? result.Items[result.Items.length - 1].alumno_dni
               : null,
             total: result.Items.length
