@@ -21,25 +21,28 @@ exports.handler = async (event) => {
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token })
+      Payload: JSON.stringify({ body: { token, tenant_id } })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403) {
+    if (validarPayload.statusCode !== 200) {
       return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
     }
 
-    const rol = validarPayload.rol;
-    const dni = validarPayload.dni;
+    const usuario = typeof validarPayload.body === 'string'
+      ? JSON.parse(validarPayload.body)
+      : validarPayload.body;
+
+    const rol = usuario.rol;
+    const dni = usuario.dni;
     const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
     const partitionKey = `${tenant_id}#${curso_id}`;
-
-    let params;
+    const estadoSuffix = `#${estado}`;
 
     if (rol === 'alumno') {
       // Solo puede ver sus propias compras
-      const sortKey = `${dni}#${estado}`;
-      params = {
+      const sortKey = `${dni}${estadoSuffix}`;
+      const params = {
         TableName: TABLE_COMPRAS,
         KeyConditionExpression: 'tenant_id_curso_id = :pk AND dni_estado = :sk',
         ExpressionAttributeValues: {
@@ -64,18 +67,19 @@ exports.handler = async (event) => {
 
     } else {
       // Admin u otro rol: puede ver todos los del curso con ese estado
-      params = {
+      const params = {
         TableName: TABLE_COMPRAS,
-        FilterExpression: 'tenant_id_curso_id = :pk AND contains(dni_estado, :estado)',
+        KeyConditionExpression: 'tenant_id_curso_id = :pk',
+        FilterExpression: 'contains(dni_estado, :estado)',
         ExpressionAttributeValues: {
           ':pk': partitionKey,
-          ':estado': `#${estado}`
+          ':estado': estadoSuffix
         },
         Limit: parseInt(limit),
         ExclusiveStartKey: decodedLastKey
       };
 
-      const result = await dynamodb.scan(params).promise();
+      const result = await dynamodb.query(params).promise();
 
       return {
         statusCode: 200,
@@ -92,8 +96,9 @@ exports.handler = async (event) => {
     console.error('Error en listar compras:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: 'Error interno', detalle: error.message })
     };
   }
 };
+
 
