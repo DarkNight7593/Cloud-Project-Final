@@ -12,7 +12,7 @@ exports.handler = async (event) => {
 
     if (!token || !tenant_id) {
       return {
-        statusCode: 403,
+        statusCode: 401,
         body: JSON.stringify({ error: 'Token y tenant_id son requeridos' })
       };
     }
@@ -30,11 +30,19 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-
     if (validarPayload.statusCode !== 200) {
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error desconocido al validar token';
+
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {
+      }
+
       return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Token inválido o expirado' })
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
       };
     }
 

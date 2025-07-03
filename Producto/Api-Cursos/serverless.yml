@@ -82,9 +82,9 @@ resources:
         GlobalSecondaryIndexes:
           - IndexName: tenant_instructor_index
             KeySchema:
-              - AttributeName: tenant_id
+              - AttributeName: tenant_instructor
                 KeyType: HASH
-              - AttributeName: instructor_dni
+              - AttributeName: curso_id
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL

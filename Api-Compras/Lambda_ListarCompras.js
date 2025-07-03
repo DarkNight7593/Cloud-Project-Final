@@ -8,12 +8,19 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id, estado, limit = 10, lastKey } = event.queryStringParameters || {};
+    const {
+      tenant_id,
+      curso_id,
+      estado,
+      limit = 10,
+      lastCursoId,
+      lastAlumnoDni
+    } = event.queryStringParameters || {};
 
-    if (!token || !tenant_id || !curso_id || !estado) {
+    if (!token || !tenant_id || !curso_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Se requieren token, tenant_id, curso_id y estado' })
+        body: JSON.stringify({ error: 'Se requieren token, tenant_id y curso_id' })
       };
     }
 
@@ -25,8 +32,18 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
+
     if (validarPayload.statusCode !== 200) {
-      return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido o expirado' }) };
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error desconocido al validar token';
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {}
+      return {
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
+      };
     }
 
     const usuario = typeof validarPayload.body === 'string'
@@ -35,62 +52,84 @@ exports.handler = async (event) => {
 
     const rol = usuario.rol;
     const dni = usuario.dni;
-    const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
-    const partitionKey = `${tenant_id}#${curso_id}`;
-    const estadoSuffix = `#${estado}`;
+    const parsedLimit = parseInt(limit);
 
+    // === ALUMNO ===
     if (rol === 'alumno') {
-      // Solo puede ver sus propias compras
-      const sortKey = `${dni}${estadoSuffix}`;
-      const params = {
-        TableName: TABLE_COMPRAS,
-        KeyConditionExpression: 'tenant_id_curso_id = :pk AND dni_estado = :sk',
-        ExpressionAttributeValues: {
-          ':pk': partitionKey,
-          ':sk': sortKey
-        },
-        Limit: parseInt(limit),
-        ExclusiveStartKey: decodedLastKey
-      };
+      if (!estado || !['reservado', 'inscrito'].includes(estado)) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Estado requerido o inválido' })
+        };
+      }
 
-      const result = await dynamodb.query(params).promise();
+      const partitionKey = `${tenant_id}#${dni}#${estado}`;
+      let keyCondition = 'tenant_id_dni_estado = :pk';
+      const expressionValues = { ':pk': partitionKey };
+
+      if (lastCursoId) {
+        keyCondition += ' AND curso_id > :lastCursoId';
+        expressionValues[':lastCursoId'] = lastCursoId;
+      }
+
+      const result = await dynamodb.query({
+        TableName: TABLE_COMPRAS,
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeValues: expressionValues,
+        Limit: parsedLimit
+      }).promise();
 
       return {
         statusCode: 200,
         body: JSON.stringify({
           compras: result.Items,
-          lastKey: result.LastEvaluatedKey
-            ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
-            : null
-        })
-      };
-
-    } else {
-      // Admin u otro rol: puede ver todos los del curso con ese estado
-      const params = {
-        TableName: TABLE_COMPRAS,
-        KeyConditionExpression: 'tenant_id_curso_id = :pk',
-        FilterExpression: 'contains(dni_estado, :estado)',
-        ExpressionAttributeValues: {
-          ':pk': partitionKey,
-          ':estado': estadoSuffix
-        },
-        Limit: parseInt(limit),
-        ExclusiveStartKey: decodedLastKey
-      };
-
-      const result = await dynamodb.query(params).promise();
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          compras: result.Items,
-          lastKey: result.LastEvaluatedKey
-            ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
-            : null
+          paginacion: {
+            siguienteCursoId: result.Items.length > 0
+              ? result.Items[result.Items.length - 1].curso_id
+              : null,
+            total: result.Items.length
+          }
         })
       };
     }
+
+    // === INSTRUCTOR o ADMIN ===
+    if (rol === 'instructor' || rol === 'admin') {
+      const partitionKey = `${tenant_id}#${curso_id}`;
+      let keyCondition = 'tenant_id_curso_id = :pk';
+      const expressionValues = { ':pk': partitionKey };
+
+      if (lastAlumnoDni) {
+        keyCondition += ' AND alumno_dni > :lastAlumnoDni';
+        expressionValues[':lastAlumnoDni'] = lastAlumnoDni;
+      }
+
+      const result = await dynamodb.query({
+        TableName: TABLE_COMPRAS,
+        IndexName: 'tenant_curso_index',
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeValues: expressionValues,
+        Limit: parsedLimit
+      }).promise();
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          compras: result.Items,
+          paginacion: {
+            siguienteAlumnoDni: result.Items.length > 0
+              ? result.Items[result.Items.length - 1].alumno_dni
+              : null,
+            total: result.Items.length
+          }
+        })
+      };
+    }
+
+    return {
+      statusCode: 403,
+      body: JSON.stringify({ error: 'Rol no autorizado' })
+    };
 
   } catch (error) {
     console.error('Error en listar compras:', error);
@@ -100,5 +139,6 @@ exports.handler = async (event) => {
     };
   }
 };
+
 
 

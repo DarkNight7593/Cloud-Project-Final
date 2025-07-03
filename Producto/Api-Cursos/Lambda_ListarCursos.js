@@ -8,11 +8,16 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { limit = 5, lastKey, dni_instructor, tenant_id } = event.queryStringParameters || {};
+    const {
+      limit = 5,
+      lastCursoId,
+      dni_instructor,
+      tenant_id
+    } = event.queryStringParameters || {};
 
     if (!token || !tenant_id) {
       return {
-        statusCode: 403,
+        statusCode: 401,
         body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
       };
     }
@@ -25,51 +30,72 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
+
     if (validarPayload.statusCode !== 200) {
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error al validar token';
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {}
       return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Token inválido o expirado' })
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
       };
     }
 
-    // Parsear lastKey para paginación
-    const decodedLastKey = lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined;
+    const parsedLimit = parseInt(limit);
 
-    // Construir parámetros de consulta
-    let params;
+    let result;
+
     if (dni_instructor) {
-      params = {
+      const tenantInstructor = `${tenant_id}#${dni_instructor}`;
+
+      // KeyCondition con curso_id > :lastCursoId
+      let keyCondition = 'tenant_instructor = :tenantInstructor';
+      let expressionValues = { ':tenantInstructor': tenantInstructor };
+
+      if (lastCursoId) {
+        keyCondition += ' AND curso_id > :lastCursoId';
+        expressionValues[':lastCursoId'] = lastCursoId;
+      }
+
+      const params = {
         TableName: TABLE_CURSO,
         IndexName: 'tenant_instructor_index',
-        KeyConditionExpression: 'tenant_id = :tenant_id AND instructor_dni = :dni',
-        ExpressionAttributeValues: {
-          ':tenant_id': tenant_id,
-          ':dni': dni_instructor
-        },
-        Limit: parseInt(limit),
-        ExclusiveStartKey: decodedLastKey
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeValues: expressionValues,
+        Limit: parsedLimit
       };
-    } else {
-      params = {
-        TableName: TABLE_CURSO,
-        KeyConditionExpression: 'tenant_id = :tenant_id',
-        ExpressionAttributeValues: {
-          ':tenant_id': tenant_id
-        },
-        Limit: parseInt(limit),
-        ExclusiveStartKey: decodedLastKey
-      };
-    }
 
-    const result = await dynamodb.query(params).promise();
+      result = await dynamodb.query(params).promise();
+
+    } else {
+      let keyCondition = 'tenant_id = :tenant_id';
+      let expressionValues = { ':tenant_id': tenant_id };
+
+      if (lastCursoId) {
+        keyCondition += ' AND curso_id > :lastCursoId';
+        expressionValues[':lastCursoId'] = lastCursoId;
+      }
+
+      const params = {
+        TableName: TABLE_CURSO,
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeValues: expressionValues,
+        Limit: parsedLimit
+      };
+
+      result = await dynamodb.query(params).promise();
+    }
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         cursos: result.Items,
         paginacion: {
-          siguienteToken: result.LastEvaluatedKey
-            ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+          siguienteCursoId: result.Items.length > 0
+            ? result.Items[result.Items.length - 1].curso_id
             : null,
           total: result.Items.length
         }
@@ -87,5 +113,6 @@ exports.handler = async (event) => {
     };
   }
 };
+
 
 

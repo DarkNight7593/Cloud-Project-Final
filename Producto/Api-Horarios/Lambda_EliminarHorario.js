@@ -26,10 +26,20 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403) {
+
+    if (validarPayload.statusCode !== 200) {
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error desconocido al validar token';
+
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {
+      }
+
       return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Token inválido o expirado' })
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
       };
     }
 

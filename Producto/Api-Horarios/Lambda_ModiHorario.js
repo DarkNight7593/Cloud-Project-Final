@@ -34,8 +34,21 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    if (validarPayload.statusCode === 403) {
-      return { statusCode: 403, body: JSON.stringify({ error: 'Token inválido' }) };
+    
+    if (validarPayload.statusCode !== 200) {
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error desconocido al validar token';
+
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {
+      }
+
+      return {
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
+      };
     }
 
     const tenant_id_curso_id = `${tenant_id}#${curso_id}`;

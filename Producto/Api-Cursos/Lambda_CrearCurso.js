@@ -10,12 +10,12 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const data = JSON.parse(event.body);
+    const data = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
     const { tenant_id, nombre, descripcion, inicio, fin, precio } = data;
 
     if (!token || !tenant_id) {
       return {
-        statusCode: 403,
+        statusCode: 401,
         body: JSON.stringify({ error: 'Token y tenant_id son requeridos' })
       };
     }
@@ -30,10 +30,20 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
+    
     if (validarPayload.statusCode !== 200) {
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error desconocido al validar token';
+
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {
+      }
+
       return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Token inválido o expirado' })
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
       };
     }
 
@@ -42,7 +52,7 @@ exports.handler = async (event) => {
     // Verificar que sea un instructor
     if (usuario.rol !== 'instructor') {
       return {
-        statusCode: 403,
+        statusCode: 401,
         body: JSON.stringify({ error: 'Solo los instructores pueden crear cursos' })
       };
     }
@@ -55,19 +65,22 @@ exports.handler = async (event) => {
     }
 
     const curso_id = uuidv4();
+    const item = {
+      tenant_id,
+      curso_id,
+      nombre,
+      descripcion,
+      inicio,
+      fin,
+      precio,
+      instructor_dni: usuario.dni,
+      instructor_nombre: usuario.full_name,
+      tenant_instructor: `${tenant_id}#${usuario.dni}`  // ✅ Clave para GSI multitenant-safe
+    };
+
     await dynamodb.put({
       TableName: TABLE_CURSO,
-      Item: {
-        tenant_id,
-        curso_id,
-        nombre,
-        descripcion,
-        inicio,
-        fin,
-        precio,
-        instructor_dni: usuario.dni,
-        instructor_nombre: usuario.full_name
-      }
+      Item: item
     }).promise();
 
     return {
@@ -91,4 +104,3 @@ exports.handler = async (event) => {
     };
   }
 };
-

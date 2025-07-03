@@ -33,9 +33,9 @@ def lambda_handler(event, context):
 
         if 'Item' not in response:
             return {
-                'statusCode': 403,
+                'statusCode': 400,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Token no existe o es inválido'})
+                'body': json.dumps({'error': 'Token no existe'})
             }
 
         registro = response['Item']

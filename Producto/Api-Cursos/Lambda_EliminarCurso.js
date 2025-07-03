@@ -12,10 +12,10 @@ exports.handler = async (event) => {
     const token = event.headers?.Authorization;
     const { curso_id, tenant_id } = event.queryStringParameters || {};
 
-    if (!token || !tenant_id) {
+    if (!token || !tenant_id || !curso_id) {
       return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Token y tenant_id son requeridos' })
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Se requieren token, tenant_id y curso_id' })
       };
     }
 
@@ -29,58 +29,76 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
+    
     if (validarPayload.statusCode !== 200) {
+      let statusCode = validarPayload.statusCode;
+      let errorMessage = 'Error desconocido al validar token';
+
+      try {
+        const parsedBody = JSON.parse(validarPayload.body);
+        errorMessage = parsedBody.error || errorMessage;
+      } catch (_) {
+      }
+
+      return {
+        statusCode,
+        body: JSON.stringify({ error: errorMessage })
+      };
+    }
+
+    const usuario = typeof validarPayload.body === 'string'
+      ? JSON.parse(validarPayload.body)
+      : validarPayload.body;
+
+    const { rol, dni } = usuario;
+
+    // Obtener el curso para verificar si el usuario es el instructor creador
+    const curso = await dynamodb.get({
+      TableName: TABLE_CURSO,
+      Key: { tenant_id, curso_id }
+    }).promise();
+
+    if (!curso.Item) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Curso no encontrado' })
+      };
+    }
+
+    const instructorDni = curso.Item.instructor_dni;
+
+    // Solo puede eliminarlo el admin o el instructor que lo creó
+    if (rol !== 'admin' && dni !== instructorDni) {
       return {
         statusCode: 403,
-        body: JSON.stringify({ error: 'Token inválido o expirado' })
+        body: JSON.stringify({ error: 'No tiene permisos para eliminar este curso' })
       };
     }
 
-    const usuario = JSON.parse(validarPayload.body);
-
-    // Solo instructores o admin pueden eliminar cursos
-    if (!['admin', 'instructor'].includes(usuario.rol)) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ error: 'Solo administradores o instructores pueden eliminar cursos' })
-      };
-    }
-
-    if (!curso_id) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'curso_id requerido' })
-      };
-    }
-
-    const tenantCursoKey = tenant_id+'#'+curso_id;
-
-    // Buscar los horarios del curso
+    // Buscar y eliminar los horarios del curso
+    const tenantCursoKey = `${tenant_id}#${curso_id}`;
     const horarios = await dynamodb.query({
       TableName: TABLE_HORARIO,
       KeyConditionExpression: 'tenant_id_curso_id = :key',
       ExpressionAttributeValues: { ':key': tenantCursoKey }
     }).promise();
 
-    // Eliminar cada horario usando su lambda
-    const promises = horarios.Items.map(item => {
-      const payload = {
-        tenant_id,
-        curso_id,
-        horario_id: item.horario_id
-      };
-
+    const eliminarHorarios = horarios.Items.map(item => {
       return lambda.invoke({
         FunctionName: FUNCION_ELIMINAR_HORARIO,
-        InvocationType: 'Event', // asincrónico
+        InvocationType: 'Event',
         Payload: JSON.stringify({
           headers: { Authorization: token },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            tenant_id,
+            curso_id,
+            horario_id: item.horario_id
+          })
         })
       }).promise();
     });
 
-    await Promise.all(promises);
+    await Promise.all(eliminarHorarios);
 
     // Eliminar el curso
     await dynamodb.delete({
@@ -93,7 +111,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         message: 'Curso y horarios eliminados correctamente',
         curso_id,
-        total_horarios: promises.length
+        total_horarios: eliminarHorarios.length
       })
     };
 
@@ -108,5 +126,6 @@ exports.handler = async (event) => {
     };
   }
 };
+
 
 
