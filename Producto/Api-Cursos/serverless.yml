@@ -73,6 +73,8 @@ resources:
             AttributeType: S
           - AttributeName: instructor_dni
             AttributeType: S
+          - AttributeName: tenant_instructor
+            AttributeType: S
         KeySchema:
           - AttributeName: tenant_id
             KeyType: HASH
