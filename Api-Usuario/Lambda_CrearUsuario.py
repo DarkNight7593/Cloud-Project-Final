@@ -12,7 +12,6 @@ def hash_password(password):
 
 def lambda_handler(event, context):
     try:
-        # Parsear body si es string
         if isinstance(event['body'], str):
             event['body'] = json.loads(event['body'])
 
@@ -30,12 +29,25 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Faltan tenant_id, dni, full_name, password o rol'})
             }
 
-        tabla = boto3.resource('dynamodb').Table(os.environ["TABLE_USER"])
+        # 🔍 1️⃣ Validar que el tenant exista en la tabla de organizaciones
+        dynamodb = boto3.resource('dynamodb')
+        tabla_org = dynamodb.Table(os.environ["TABLE_ORG"])
+        org_result = tabla_org.get_item(Key={'tenant_id': tenant_id})
+
+        if 'Item' not in org_result:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': f'Tenant "{tenant_id}" no está registrado'})
+            }
+
+        # ⚙️ Preparar tabla de usuarios
+        tabla_usuarios = dynamodb.Table(os.environ["TABLE_USER"])
         tenant_id_rol = f"{tenant_id}#{rol}"
 
-        # 1️⃣ Si se está creando un admin, validar que no exista otro admin en ese tenant
+        # 🚫 2️⃣ Validar que solo exista un admin por tenant
         if rol == "admin":
-            resp = tabla.query(
+            resp = tabla_usuarios.query(
                 KeyConditionExpression=boto3.dynamodb.conditions.Key('tenant_id_rol').eq(tenant_id_rol),
                 Limit=1
             )
@@ -46,7 +58,7 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': 'Ya existe un administrador registrado para este tenant'})
                 }
 
-        # 2️⃣ Si se está creando un instructor, validar el token (debe ser admin)
+        # ✅ 3️⃣ Validar token si se intenta crear un instructor (solo admins pueden hacerlo)
         if rol == "instructor":
             token = event.get('headers', {}).get('Authorization')
             if not token:
@@ -58,6 +70,7 @@ def lambda_handler(event, context):
 
             lambda_client = boto3.client('lambda')
             FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
+
             validacion = lambda_client.invoke(
                 FunctionName=FUNCION_VALIDAR,
                 InvocationType='RequestResponse',
@@ -69,6 +82,7 @@ def lambda_handler(event, context):
                 })
             )
             payload = json.loads(validacion['Payload'].read())
+
             if payload.get('statusCode') != 200:
                 return {
                     'statusCode': 403,
@@ -84,9 +98,9 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': 'Solo administradores pueden crear instructores'})
                 }
 
-        # 3️⃣ Crear usuario
+        # 📝 4️⃣ Registrar usuario
         hashed_password = hash_password(password)
-        tabla.put_item(Item={
+        tabla_usuarios.put_item(Item={
             'tenant_id_rol': tenant_id_rol,
             'dni': dni,
             'full_name': full_name,
