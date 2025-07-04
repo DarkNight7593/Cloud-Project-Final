@@ -19,7 +19,11 @@ function horariosChocan(i1, f1, i2, f2) {
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const body = JSON.parse(event.body);
+    let body = event.body;
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+
     const { tenant_id, curso_id, dias, inicio_hora, fin_hora } = body;
 
     if (!token || !tenant_id) {

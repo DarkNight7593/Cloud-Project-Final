@@ -10,7 +10,11 @@ const FUNCION_BUSCAR_HORARIO = process.env.FUNCION_BUSCAR_HORARIO;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id, horario_id, estado } = JSON.parse(event.body || '{}');
+    let body = event.body;
+    if (typeof body === 'string') {
+    body = JSON.parse(body);
+    }
+    const { tenant_id, curso_id, horario_id, estado } = body || {};
 
     if (!token || !tenant_id) {
       return {
