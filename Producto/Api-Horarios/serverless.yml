@@ -69,9 +69,20 @@ resources:
             AttributeType: S
           - AttributeName: horario_id
             AttributeType: S
+          - AttributeName: tenant_id 
+            AttributeType: S
         KeySchema:
           - AttributeName: tenant_id_curso_id
             KeyType: HASH
           - AttributeName: horario_id
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes:
+          - IndexName: tenant_horario_index
+            KeySchema:
+              - AttributeName: tenant_id
+                KeyType: HASH
+              - AttributeName: horario_id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

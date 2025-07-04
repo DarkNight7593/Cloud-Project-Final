@@ -75,7 +75,7 @@ exports.handler = async (event) => {
       precio,
       instructor_dni: usuario.dni,
       instructor_nombre: usuario.full_name,
-      tenant_instructor: `${tenant_id}#${usuario.dni}`  // ✅ Clave para GSI multitenant-safe
+      tenant_instructor: `${tenant_id}#${usuario.dni}`
     };
 
     await dynamodb.put({

@@ -8,7 +8,7 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id, horario_id } = event.queryStringParameters || {};
+    const { tenant_id, horario_id } = event.queryStringParameters || {};
 
     // Validación inicial
     if (!token || !tenant_id) {
@@ -18,10 +18,10 @@ exports.handler = async (event) => {
       };
     }
 
-    if (!curso_id || !horario_id) {
+    if (!horario_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'curso_id y horario_id son requeridos' })
+        body: JSON.stringify({ error: 'horario_id es requeridos' })
       };
     }
 
@@ -50,25 +50,29 @@ exports.handler = async (event) => {
       };
     }
 
-    const tenant_id_curso_id = tenant_id+'#'+curso_id;
-
-    // Obtener el horario
-    const result = await dynamodb.get({
-      TableName: TABLE_HORARIO,
-      Key: { tenant_id_curso_id, horario_id }
+    // Obtener el horario por índice secundario
+    const result = await dynamodb.query({
+    TableName: TABLE_HORARIO,
+    IndexName: 'tenant_horario_index',
+    KeyConditionExpression: 'tenant_id = :tenant AND horario_id = :horario',
+    ExpressionAttributeValues: {
+      ':tenant': tenant_id,
+      ':horario': horario_id
+    },
+    Limit: 1
     }).promise();
 
-    if (!result.Item) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Horario no encontrado' })
-      };
-    }
-
+  if (!result.Items || result.Items.length === 0) {
     return {
-      statusCode: 200,
-      body: JSON.stringify(result.Item)
+      statusCode: 404,
+      body: JSON.stringify({ error: 'Horario no encontrado' })
     };
+  }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(result.Items[0])
+  };
 
   } catch (e) {
     console.error('Error al obtener el horario:', e);

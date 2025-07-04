@@ -88,7 +88,7 @@ exports.handler = async (event) => {
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { tenant_id, curso_id, horario_id }
+        queryStringParameters: { tenant_id, horario_id }
       })
     }).promise();
 

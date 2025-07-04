@@ -118,6 +118,7 @@ exports.handler = async (event) => {
     await dynamodb.put({
       TableName: TABLE_HORARIO,
       Item: {
+        tenant_id,  
         tenant_id_curso_id,
         horario_id,
         dias,

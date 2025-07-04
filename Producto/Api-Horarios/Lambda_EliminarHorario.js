@@ -9,7 +9,7 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id, horario_id } = JSON.parse(event.body);
+    const { tenant_id, horario_id } = JSON.parse(event.body);
 
     if (!token || !tenant_id) {
       return {
@@ -26,32 +26,48 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-
     if (validarPayload.statusCode !== 200) {
       let statusCode = validarPayload.statusCode;
-      let errorMessage = 'Error desconocido al validar token';
-
+      let errorMessage = 'Error al validar token';
       try {
         const parsedBody = JSON.parse(validarPayload.body);
         errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
-
+      } catch (_) {}
       return {
         statusCode,
         body: JSON.stringify({ error: errorMessage })
       };
     }
 
-    if (!curso_id || !horario_id) {
+    if (!horario_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan curso_id o horario_id' })
+        body: JSON.stringify({ error: 'Falta el campo horario_id' })
       };
     }
 
-    const tenant_id_curso_id = `${tenant_id}#${curso_id}`;
+    // Buscar por índice secundario
+    const result = await dynamodb.query({
+      TableName: TABLE_HORARIO,
+      IndexName: 'tenant_horario_index',
+      KeyConditionExpression: 'tenant_id = :tenant AND horario_id = :horario',
+      ExpressionAttributeValues: {
+        ':tenant': tenant_id,
+        ':horario': horario_id
+      },
+      Limit: 1
+    }).promise();
 
+    if (!result.Items || result.Items.length === 0) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Horario no encontrado' })
+      };
+    }
+
+    const { tenant_id_curso_id } = result.Items[0];
+
+    // Eliminar usando la clave primaria real
     await dynamodb.delete({
       TableName: TABLE_HORARIO,
       Key: { tenant_id_curso_id, horario_id }
@@ -70,4 +86,3 @@ exports.handler = async (event) => {
     };
   }
 };
-

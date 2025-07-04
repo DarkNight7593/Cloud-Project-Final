@@ -17,12 +17,12 @@ exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
     const body = JSON.parse(event.body);
-    const { tenant_id, curso_id, horario_id, dias, inicio_hora, fin_hora } = body;
+    const { tenant_id, horario_id, dias, inicio_hora, fin_hora } = body;
 
-    if (!token || !tenant_id || !curso_id || !horario_id) {
+    if (!token || !tenant_id || !horario_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan token, tenant_id, curso_id o horario_id' })
+        body: JSON.stringify({ error: 'Faltan token, tenant_id o horario_id' })
       };
     }
 
@@ -34,59 +34,64 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    
     if (validarPayload.statusCode !== 200) {
       let statusCode = validarPayload.statusCode;
-      let errorMessage = 'Error desconocido al validar token';
-
+      let errorMessage = 'Error al validar token';
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
-        errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
-
+        const parsed = JSON.parse(validarPayload.body);
+        errorMessage = parsed.error || errorMessage;
+      } catch (_) {}
       return {
         statusCode,
         body: JSON.stringify({ error: errorMessage })
       };
     }
 
-    const tenant_id_curso_id = `${tenant_id}#${curso_id}`;
-
-    // ✅ Verificar que el horario exista
-    const existing = await dynamodb.get({
+    // Buscar horario usando índice secundario
+    const result = await dynamodb.query({
       TableName: TABLE_HORARIO,
-      Key: { tenant_id_curso_id, horario_id }
+      IndexName: 'tenant_horario_index',
+      KeyConditionExpression: 'tenant_id = :t AND horario_id = :h',
+      ExpressionAttributeValues: {
+        ':t': tenant_id,
+        ':h': horario_id
+      },
+      Limit: 1
     }).promise();
 
-    if (!existing.Item) {
+    if (!result.Items || result.Items.length === 0) {
       return {
         statusCode: 404,
         body: JSON.stringify({ error: 'El horario no existe' })
       };
     }
 
+    const existing = result.Items[0];
+    const tenant_id_curso_id = existing.tenant_id_curso_id;
+
     // Verificar colisiones
-    const scan = await dynamodb.query({
+    const horarios = await dynamodb.query({
       TableName: TABLE_HORARIO,
       KeyConditionExpression: 'tenant_id_curso_id = :pk',
-      ExpressionAttributeValues: { ':pk': tenant_id_curso_id }
+      ExpressionAttributeValues: {
+        ':pk': tenant_id_curso_id
+      }
     }).promise();
 
-    const choque = scan.Items.find(h =>
+    const hayChoque = horarios.Items.find(h =>
       h.horario_id !== horario_id &&
       diasChocan(dias, h.dias) &&
       horariosChocan(inicio_hora, fin_hora, h.inicio_hora, h.fin_hora)
     );
 
-    if (choque) {
+    if (hayChoque) {
       return {
         statusCode: 409,
         body: JSON.stringify({ error: 'Existe choque de horario en al menos un día' })
       };
     }
 
-    // Actualizar horario (con posible descripción)
+    // Actualizar horario
     const item = {
       tenant_id_curso_id,
       horario_id,
@@ -107,7 +112,7 @@ exports.handler = async (event) => {
         horario_id,
         dias,
         inicio_hora,
-        fin_hora,
+        fin_hora
       })
     };
 
