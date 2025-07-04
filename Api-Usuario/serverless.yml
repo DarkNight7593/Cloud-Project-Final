@@ -58,6 +58,15 @@ functions:
           method: post
           cors: true
           integration: lambda
+
+  crearorg:
+    handler: Lambda_CrearOrganizacion.lambda_handler
+    events:
+      - http:
+          path: /org/crear
+          method: post
+          cors: true
+          integration: lambda
           
 resources:
   Resources:
