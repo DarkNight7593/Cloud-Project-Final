@@ -22,7 +22,7 @@ exports.handler = async (event) => {
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
-      Payload: JSON.stringify({ token, tenant_id })
+      Payload: JSON.stringify({ body: { token, tenant_id } })
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
