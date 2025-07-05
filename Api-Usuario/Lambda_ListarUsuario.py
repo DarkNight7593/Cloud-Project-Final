@@ -15,8 +15,8 @@ FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
 
 def lambda_handler(event, context):
     try:
-        headers = event['headers']
-        token = headers['Authorization']
+        headers = event.get('headers') or {}
+        token = headers.get('Authorization')
         query_params = event.get('queryStringParameters') or {}
 
         tenant_id = query_params.get('tenant_id')
