@@ -45,7 +45,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Token y tenant_id son requeridos'})
             }
 
-        if rol not in ['instructor', 'cliente']:
+        if rol not in ['instructor', 'alumno']:
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Parámetro rol requerido: instructor o cliente'})
