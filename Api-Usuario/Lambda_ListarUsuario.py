@@ -15,15 +15,26 @@ FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
 
 def lambda_handler(event, context):
     try:
-        token = event.get('headers', {}).get('Authorization')
-        if isinstance(event['body'], str):
-            event['body'] = json.loads(event['body'])
+        token = event['headers']['Authorization']  # usar [] aquí también
 
-        body = event['body']
+        # Asegurarse de que body existe
+        if 'body' not in event or event['body'] is None:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Falta el body'})
+            }
+
+        # Parsear body si es string
+        if isinstance(event['body'], str):
+            body = json.loads(event['body'])
+        else:
+            body = event['body']
+
+        # Acceder con []
         tenant_id = body['tenant_id']
         rol = body['rol']
-        last_dni = body['last_dni'] or {}
-        limit = int(body['limit'],5)
+        last_dni = body['last_dni'] if 'last_dni' in body else None
+        limit = int(body['limit']) if 'limit' in body else 5
 
         if not token or not tenant_id:
             return {
@@ -45,10 +56,10 @@ def lambda_handler(event, context):
         )
 
         payload = json.loads(validar_response['Payload'].read())
-        if payload.get('statusCode') != 200:
+        if payload['statusCode'] != 200:
             mensaje = 'Token inválido o expirado'
             try:
-                mensaje = json.loads(payload.get('body')).get('error', mensaje)
+                mensaje = json.loads(payload['body'])['error']
             except:
                 pass
             return {
@@ -56,11 +67,11 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': mensaje})
             }
 
-        usuario = payload.get('body', {})
+        usuario = payload['body']
         if isinstance(usuario, str):
             usuario = json.loads(usuario)
 
-        if usuario.get('rol') != 'admin':
+        if usuario['rol'] != 'admin':
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'Solo administradores pueden listar usuarios'})
@@ -78,7 +89,7 @@ def lambda_handler(event, context):
             Limit=limit
         )
 
-        items = result.get('Items', [])
+        items = result['Items']
         last_dni_return = items[-1]['dni'] if items else None
 
         return {
@@ -89,6 +100,12 @@ def lambda_handler(event, context):
             })
         }
 
+    except KeyError as ke:
+        logger.error(f"Falta campo requerido: {ke}", exc_info=True)
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': f'Falta campo requerido: {str(ke)}'})
+        }
     except Exception as e:
         logger.error("Error inesperado", exc_info=True)
         return {
