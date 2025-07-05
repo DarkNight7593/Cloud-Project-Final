@@ -15,14 +15,14 @@ FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
 
 def lambda_handler(event, context):
     try:
-        headers = event.get('headers', {}) or {}
-        token = headers.get('Authorization')
-        query_params = event.get('queryStringParameters') or {}
+        headers = event['headers']
+        token = headers['Authorization']
+        query_params = event['queryStringParameters'] or {}
 
-        tenant_id = query_params.get('tenant_id')
-        rol = query_params.get('rol')
-        last_dni = query_params.get('last_dni')
-        limit = int(query_params.get('limit', 10))
+        tenant_id = query_params['tenant_id']
+        rol = query_params['rol']
+        last_dni = query_params['last_dni']
+        limit = int(query_params['limit'], 10)
 
         if not token or not tenant_id:
             return {
