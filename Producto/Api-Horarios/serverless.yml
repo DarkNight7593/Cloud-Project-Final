@@ -5,7 +5,7 @@ provider:
   name: aws
   runtime: nodejs22.x
   memorySize: 1024
-  timeout: 30
+  timeout: 60
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
@@ -13,7 +13,11 @@ provider:
     TABLE_HORARIO: ${sls:stage}-t_horario
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
 
+plugins:
+  - serverless-aws-documentation
+
 functions:
+
   crearHorario:
     handler: Lambda_CrearHorario.handler
     events:
@@ -21,6 +25,29 @@ functions:
           path: /horario/crear
           method: post
           cors: true
+          documentation:
+            summary: Crear horario
+            description: Crea un nuevo horario para un curso siempre que no exista conflicto.
+            tags:
+              - Horario
+            requestHeaders:
+              - name: Authorization
+                description: Token de autenticación JWT
+                required: true
+            requestBody:
+              description: Información del nuevo horario a crear
+            requestModels:
+              'application/json': CrearHorarioRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Horario creado exitosamente
+              - statusCode: 403
+                responseBody:
+                  description: Token inválido o no autorizado
+              - statusCode: 409
+                responseBody:
+                  description: Conflicto de horario detectado
 
   listarHorario:
     handler: Lambda_ListarHorario.handler
@@ -29,6 +56,29 @@ functions:
           path: /horario/listar
           method: get
           cors: true
+          documentation:
+            summary: Listar horarios
+            description: Lista horarios de un curso específico con paginación.
+            tags:
+              - Horario
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestParameters:
+              - name: querystring.tenant_id
+                required: true
+              - name: querystring.curso_id
+                required: true
+              - name: querystring.limit
+              - name: querystring.lastHorarioId
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Lista de horarios
+              - statusCode: 400
+                responseBody:
+                  description: Parámetros faltantes
 
   obtenerHorario:
     handler: Lambda_BuscarHorario.handler
@@ -37,22 +87,92 @@ functions:
           path: /horario/buscar
           method: get
           cors: true
+          documentation:
+            summary: Obtener horario por ID
+            description: Devuelve los detalles de un horario específico.
+            tags:
+              - Horario
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestParameters:
+              - name: querystring.tenant_id
+                required: true
+              - name: querystring.horario_id
+                required: true
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Horario encontrado
+              - statusCode: 403
+                responseBody:
+                  description: Token inválido
+              - statusCode: 404
+                responseBody:
+                  description: Horario no encontrado
 
   actualizarHorario:
     handler: Lambda_ModiHorario.handler
     events:
       - http:
-          path: horario/modificar
+          path: /horario/modificar
           method: put
           cors: true
+          documentation:
+            summary: Actualizar horario
+            description: Modifica los datos de un horario existente.
+            tags:
+              - Horario
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestModels:
+              'application/json': ActualizarHorarioRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Horario actualizado exitosamente
+              - statusCode: 400
+                responseBody:
+                  description: Datos inválidos
+              - statusCode: 404
+                responseBody:
+                  description: Horario no encontrado
+              - statusCode: 409
+                responseBody:
+                  description: Choque con otro horario
 
   eliminarHorario:
     handler: Lambda_EliminarHorario.handler
     events:
       - http:
-          path: horario/eliminar
+          path: /horario/eliminar
           method: delete
           cors: true
+          documentation:
+            summary: Eliminar horario
+            description: Elimina un horario específico mediante `tenant_id` y `horario_id`.
+            tags:
+              - Horario
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestModels:
+              'application/json': EliminarHorarioRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Horario eliminado exitosamente
+              - statusCode: 404
+                responseBody:
+                  description: Horario no encontrado
+              - statusCode: 403
+                responseBody:
+                  description: Token inválido
+
 package:
   individually: false
   include:
@@ -86,3 +206,64 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
+custom:
+  documentation:
+    models:
+      CrearHorarioRequest:
+        description: Modelo para crear un nuevo horario
+        type: object
+        properties:
+          tenant_id:
+            type: string
+          curso_id:
+            type: string
+          dias:
+            type: array
+            items:
+              type: string
+          inicio_hora:
+            type: string
+          fin_hora:
+            type: string
+        required:
+          - tenant_id
+          - curso_id
+          - dias
+          - inicio_hora
+          - fin_hora
+
+      ActualizarHorarioRequest:
+        description: Modelo para modificar un horario
+        type: object
+        properties:
+          tenant_id:
+            type: string
+          horario_id:
+            type: string
+          dias:
+            type: array
+            items:
+              type: string
+          inicio_hora:
+            type: string
+          fin_hora:
+            type: string
+        required:
+          - tenant_id
+          - horario_id
+          - dias
+          - inicio_hora
+          - fin_hora
+
+      EliminarHorarioRequest:
+        description: Modelo para eliminar un horario
+        type: object
+        properties:
+          tenant_id:
+            type: string
+          horario_id:
+            type: string
+        required:
+          - tenant_id
+          - horario_id

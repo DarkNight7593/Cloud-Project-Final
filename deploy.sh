@@ -8,6 +8,11 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}1. Desplegando Api-Usuario...${NC}"
 cd Api-Usuario
+# Solo si no existe package.json, inicializamos npm
+    if [ ! -f "package.json" ]; then
+        npm init -y
+    fi
+npm install serverless-aws-documentation
 sls deploy 
 cd ..
 
@@ -24,6 +29,7 @@ deploy_node_service() {
 
     # Asegurarse que aws-sdk esté instalado
     npm install aws-sdk
+    npm install serverless-aws-documentation
 
     # Desplegar
     sls deploy 

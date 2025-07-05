@@ -1,11 +1,14 @@
 org: juanrodo
 service: api-compras
 
+plugins:
+  - serverless-aws-documentation
+
 provider:
   name: aws
   runtime: nodejs22.x
   memorySize: 1024
-  timeout: 30
+  timeout: 60
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
@@ -17,13 +20,35 @@ provider:
     FUNCION_BUSCAR_HORARIO: api-horario-${sls:stage}-obtenerHorario
 
 functions:
-  comprarcurso:
+  comprarCurso:
     handler: Lambda_Comprar.handler
     events:
       - http:
           path: /compra/comprar
           method: post
           cors: true
+          documentation:
+            summary: Registrar una compra
+            description: |
+              Permite a un alumno registrar la compra de un curso. Valida que exista el curso, el horario, y que no haya una compra previa del mismo curso.
+            requestModels:
+              "application/json": ComprarCursoRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Compra registrada exitosamente
+              - statusCode: 400
+                responseBody:
+                  description: Parámetros faltantes o estado inválido
+              - statusCode: 403
+                responseBody:
+                  description: Usuario no autorizado
+              - statusCode: 404
+                responseBody:
+                  description: Curso u horario no encontrado
+              - statusCode: 409
+                responseBody:
+                  description: Compra duplicada
 
   listarCompras:
     handler: Lambda_ListarCompras.handler
@@ -32,19 +57,89 @@ functions:
           path: /compra/listar
           method: get
           cors: true
+          documentation:
+            summary: Listar compras
+            description: |
+              Lista las compras del alumno autenticado o del curso si el usuario es instructor/admin. Soporta paginación por curso_id o alumno_dni.
+            requestParameters:
+              querystrings:
+                tenant_id:
+                  required: true
+                  description: ID del tenant
+                curso_id:
+                  required: false
+                  description: ID del curso (requerido para instructores/admins)
+                estado:
+                  required: false
+                  description: Estado de la compra (reservado, inscrito)
+                limit:
+                  required: false
+                  description: Límite de resultados
+                lastCursoId:
+                  required: false
+                  description: Último curso_id para paginación
+                lastAlumnoDni:
+                  required: false
+                  description: Último alumno_dni para paginación
+              headers:
+                Authorization:
+                  required: true
+                  description: Token JWT
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Lista de compras
+              - statusCode: 400
+              - statusCode: 403
 
-  eliminarcompra:
+  eliminarCompra:
     handler: Lambda_EliminarCompra.handler
     events:
       - http:
           path: /compra/eliminar
           method: delete
           cors: true
-          
-package:
-  individually: false
-  include:
-    - '**/*.js'
+          documentation:
+            summary: Eliminar compra
+            description: |
+              Permite al alumno eliminar su compra existente en estado reservado o inscrito.
+            requestModels:
+              "application/json": EliminarCompraRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Compra eliminada exitosamente
+              - statusCode: 403
+                responseBody:
+                  description: Usuario no autorizado
+              - statusCode: 404
+                responseBody:
+                  description: Compra no encontrada
+
+custom:
+  documentation:
+    models:
+      - name: ComprarCursoRequest
+        contentType: application/json
+        schema:
+          type: object
+          required: [tenant_id, curso_id, horario_id, estado]
+          properties:
+            tenant_id: { type: string }
+            curso_id: { type: string }
+            horario_id: { type: string }
+            estado:
+              type: string
+              enum: [reservado, inscrito]
+
+      - name: EliminarCompraRequest
+        contentType: application/json
+        schema:
+          type: object
+          required: [tenant_id, curso_id]
+          properties:
+            tenant_id: { type: string }
+            curso_id: { type: string }
 
 resources:
   Resources:
@@ -76,4 +171,4 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-
+            

@@ -1,11 +1,14 @@
 org: juanrodo
 service: api-usuario
 
+plugins:
+  - serverless-aws-documentation
+
 provider:
   name: aws
   runtime: python3.12
   memorySize: 1024
-  timeout: 30
+  timeout: 60
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
@@ -23,6 +26,17 @@ functions:
           method: post
           cors: true
           integration: lambda
+          documentation:
+            summary: Crear un nuevo usuario
+            description: |
+              Crea un nuevo usuario (admin o instructor) dentro de un tenant existente.
+              Si el rol es "instructor", se requiere un token válido de un administrador.
+            tags: [Usuario]
+            requestModels:
+              "application/json": CrearUsuarioRequest
+            responseModels:
+              "application/json": RespuestaGenerica
+
   login:
     handler: Lambda_LoginUsuario.lambda_handler
     events:
@@ -31,6 +45,16 @@ functions:
           method: post
           cors: true
           integration: lambda
+          documentation:
+            summary: Iniciar sesión de usuario
+            description: |
+              Permite que un usuario existente inicie sesión.
+              Retorna un token único válido por 1 hora si las credenciales son correctas.
+            tags: [Usuario]
+            requestModels:
+              "application/json": LoginRequest
+            responseModels:
+              "application/json": LoginResponse
 
   logout:
     handler: Lambda_Logout.lambda_handler
@@ -40,6 +64,16 @@ functions:
           method: post
           cors: true
           integration: lambda
+          documentation:
+            summary: Cerrar sesión de usuario
+            description: |
+              Invalida el token de acceso de un usuario cerrando su sesión.
+              El token debe estar en el body.
+            tags: [Usuario]
+            requestModels:
+              "application/json": LogoutRequest
+            responseModels:
+              "application/json": RespuestaGenerica
 
   validar:
     handler: Lambda_ValidarTokenAcceso.lambda_handler
@@ -49,6 +83,16 @@ functions:
           method: post
           cors: true
           integration: lambda
+          documentation:
+            summary: Validar token de acceso
+            description: |
+              Verifica si un token de acceso es válido y aún no ha expirado.
+              Devuelve datos del usuario si es válido.
+            tags: [Usuario]
+            requestModels:
+              "application/json": ValidarTokenRequest
+            responseModels:
+              "application/json": ValidarTokenResponse
 
   listar:
     handler: Lambda_ListarUsuario.lambda_handler
@@ -58,6 +102,16 @@ functions:
           method: post
           cors: true
           integration: lambda
+          documentation:
+            summary: Listar usuarios por rol
+            description: |
+              Devuelve una lista de usuarios de un rol específico (instructor o alumno) dentro de un tenant.
+              Solo un admin puede invocar esta función.
+            tags: [Usuario]
+            requestModels:
+              "application/json": ListarUsuarioRequest
+            responseModels:
+              "application/json": ListarUsuarioResponse
 
   crearorg:
     handler: Lambda_CrearOrganizacion.lambda_handler
@@ -67,7 +121,130 @@ functions:
           method: post
           cors: true
           integration: lambda
-          
+          documentation:
+            summary: Crear nueva organización (tenant)
+            description: |
+              Registra una nueva organización identificada por un tenant_id.
+              Debe incluirse dominio, correo y descripción.
+            tags: [Organización]
+            requestModels:
+              "application/json": CrearOrganizacionRequest
+            responseModels:
+              "application/json": RespuestaGenerica
+
+custom:
+  documentation:
+    models:
+      - name: CrearUsuarioRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, dni, full_name, password, rol]
+          properties:
+            tenant_id: { type: string }
+            dni: { type: string }
+            full_name: { type: string }
+            password: { type: string }
+            rol:
+              type: string
+              enum: [admin, instructor]
+
+      - name: LoginRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, dni, password, rol]
+          properties:
+            tenant_id: { type: string }
+            dni: { type: string }
+            password: { type: string }
+            rol: { type: string }
+
+      - name: LoginResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            message: { type: string }
+            token: { type: string }
+            expires_at: { type: string }
+
+      - name: LogoutRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, token]
+          properties:
+            tenant_id: { type: string }
+            token: { type: string }
+
+      - name: ValidarTokenRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, token]
+          properties:
+            tenant_id: { type: string }
+            token: { type: string }
+
+      - name: ValidarTokenResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            message: { type: string }
+            dni: { type: string }
+            full_name: { type: string }
+            rol: { type: string }
+            expires_at: { type: string }
+
+      - name: CrearOrganizacionRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, domain, descripcion, correo]
+          properties:
+            tenant_id: { type: string }
+            domain: { type: string }
+            descripcion: { type: string }
+            correo: { type: string }
+
+      - name: ListarUsuarioRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, rol]
+          properties:
+            tenant_id: { type: string }
+            rol:
+              type: string
+              enum: [instructor, alumno]
+            last_dni: { type: string }
+            limit: { type: integer }
+
+      - name: ListarUsuarioResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            usuarios:
+              type: array
+              items:
+                type: object
+                properties:
+                  dni: { type: string }
+                  full_name: { type: string }
+                  rol: { type: string }
+            last_dni: { type: string }
+
+      - name: RespuestaGenerica
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            message: { type: string }
+            error: { type: string }
+
 resources:
   Resources:
     TablaUsuarios:
@@ -85,6 +262,7 @@ resources:
           - AttributeName: dni
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+
     TablaTokens:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -100,6 +278,7 @@ resources:
           - AttributeName: token
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+
     TablaOrg:
       Type: AWS::DynamoDB::Table
       Properties:

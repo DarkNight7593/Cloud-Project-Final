@@ -1,11 +1,14 @@
 org: juanrodo
 service: api-curso
 
+plugins:
+  - serverless-aws-documentation
+
 provider:
   name: aws
   runtime: nodejs22.x
   memorySize: 1024
-  timeout: 30
+  timeout: 60
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
@@ -16,6 +19,7 @@ provider:
     FUNCION_ELIMINAR_HORARIO: api-horario-${sls:stage}-eliminarHorario
 
 functions:
+
   crearCurso:
     handler: Lambda_CrearCurso.handler
     events:
@@ -23,6 +27,23 @@ functions:
           path: /curso/crear
           method: post
           cors: true
+          documentation:
+            summary: Crear un curso
+            description: Un instructor puede crear un curso especificando nombre, fechas, descripción y precio.
+            tags: [Curso]
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT de autenticación
+                required: true
+            requestModels:
+              "application/json": CrearCursoRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Curso creado exitosamente
+              - statusCode: 403
+                responseBody:
+                  description: Token inválido
 
   listarCursos:
     handler: Lambda_ListarCursos.handler
@@ -31,6 +52,31 @@ functions:
           path: /curso/listar
           method: get
           cors: true
+          documentation:
+            summary: Listar cursos
+            description: Lista todos los cursos del tenant o del instructor si se proporciona dni_instructor.
+            tags: [Curso]
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestParameters:
+              - name: querystring.tenant_id
+                required: true
+                description: ID del tenant
+              - name: querystring.dni_instructor
+                required: false
+              - name: querystring.lastCursoId
+                required: false
+              - name: querystring.limit
+                required: false
+            methodResponses:
+              - statusCode: 200
+                responseModels:
+                  "application/json": ListarCursosResponse
+              - statusCode: 400
+                responseBody:
+                  description: Parámetros inválidos
 
   obtenerCurso:
     handler: Lambda_BuscarCurso.handler
@@ -39,6 +85,25 @@ functions:
           path: /curso/buscar
           method: get
           cors: true
+          documentation:
+            summary: Obtener curso por ID
+            description: Devuelve el detalle de un curso específico.
+            tags: [Curso]
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestParameters:
+              - name: querystring.tenant_id
+                required: true
+              - name: querystring.curso_id
+                required: true
+            methodResponses:
+              - statusCode: 200
+                responseModels:
+                  "application/json": CursoResponse
+              - statusCode: 403
+              - statusCode: 404
 
   actualizarCurso:
     handler: Lambda_ModiCurso.handler
@@ -47,6 +112,27 @@ functions:
           path: /curso/modificar
           method: put
           cors: true
+          documentation:
+            summary: Modificar curso
+            description: Permite actualizar campos de un curso existente.
+            tags: [Curso]
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestParameters:
+              - name: querystring.tenant_id
+                required: true
+              - name: querystring.curso_id
+                required: true
+            requestModels:
+              "application/json": ActualizarCursoRequest
+            methodResponses:
+              - statusCode: 200
+                responseModels:
+                  "application/json": ActualizarCursoResponse
+              - statusCode: 400
+              - statusCode: 404
 
   eliminarCurso:
     handler: Lambda_EliminarCurso.handler
@@ -55,6 +141,23 @@ functions:
           path: /curso/eliminar
           method: delete
           cors: true
+          documentation:
+            summary: Eliminar curso
+            description: Permite eliminar un curso y todos sus horarios asociados.
+            tags: [Curso]
+            requestHeaders:
+              - name: Authorization
+                description: Token JWT
+                required: true
+            requestModels:
+              "application/json": EliminarCursoRequest
+            methodResponses:
+              - statusCode: 200
+                responseModels:
+                  "application/json": EliminarCursoResponse
+              - statusCode: 404
+              - statusCode: 403
+
 package:
   individually: false
   include:
@@ -89,4 +192,104 @@ resources:
             Projection:
               ProjectionType: ALL
 
+custom:
+  documentation:
+    models:
+      CrearCursoRequest:
+        type: object
+        required: [tenant_id, nombre, descripcion, inicio, fin, precio]
+        properties:
+          tenant_id:
+            type: string
+          nombre:
+            type: string
+          descripcion:
+            type: string
+          inicio:
+            type: string
+          fin:
+            type: string
+          precio:
+            type: number
+
+      CursoResponse:
+        type: object
+        properties:
+          curso_id:
+            type: string
+          nombre:
+            type: string
+          descripcion:
+            type: string
+          inicio:
+            type: string
+          fin:
+            type: string
+          precio:
+            type: number
+          instructor_dni:
+            type: string
+          instructor_nombre:
+            type: string
+          tenant_id:
+            type: string
+
+      ListarCursosResponse:
+        type: object
+        properties:
+          cursos:
+            type: array
+            items:
+              $ref: "#/components/schemas/CursoResponse"
+          paginacion:
+            type: object
+            properties:
+              ultimoCursoId:
+                type: string
+              total:
+                type: number
+
+      ActualizarCursoRequest:
+        type: object
+        properties:
+          nombre:
+            type: string
+          descripcion:
+            type: string
+          inicio:
+            type: string
+          fin:
+            type: string
+          precio:
+            type: number
+
+      ActualizarCursoResponse:
+        type: object
+        properties:
+          message:
+            type: string
+          curso_id:
+            type: string
+          actualizaciones:
+            type: object
+            additionalProperties: true
+
+      EliminarCursoRequest:
+        type: object
+        required: [tenant_id, curso_id]
+        properties:
+          tenant_id:
+            type: string
+          curso_id:
+            type: string
+
+      EliminarCursoResponse:
+        type: object
+        properties:
+          message:
+            type: string
+          curso_id:
+            type: string
+          total_horarios:
+            type: number
 
