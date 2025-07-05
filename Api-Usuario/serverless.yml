@@ -55,7 +55,7 @@ functions:
     events:
       - http:
           path: /usuario/listar
-          method: post
+          method: get
           cors: true
           integration: lambda
 

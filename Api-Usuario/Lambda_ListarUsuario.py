@@ -15,25 +15,44 @@ FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
 
 def lambda_handler(event, context):
     try:
-        headers = event.get('headers', {})
+        headers = event.get('headers', {}) or {}
         token = headers.get('Authorization')
-        if not token:
+        query_params = event.get('queryStringParameters') or {}
+
+        tenant_id = query_params.get('tenant_id')
+        rol = query_params.get('rol')
+        last_dni = query_params.get('last_dni')
+        limit = int(query_params.get('limit', 10))
+
+        if not token or not tenant_id:
             return {
                 'statusCode': 403,
-                'body': json.dumps({'error': 'Token no proporcionado'})
+                'body': json.dumps({'error': 'Token y tenant_id son requeridos'})
             }
 
-        # Validar token
-        response = lambda_client.invoke(
+        if rol not in ['instructor', 'cliente']:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Parámetro rol requerido: instructor o cliente'})
+            }
+
+        # Validar token con tenant_id
+        validar_response = lambda_client.invoke(
             FunctionName=FUNCION_VALIDAR,
             InvocationType='RequestResponse',
-            Payload=json.dumps({'token': token})
+            Payload=json.dumps({'body': { 'token': token, 'tenant_id': tenant_id }})
         )
-        payload = json.loads(response['Payload'].read())
+
+        payload = json.loads(validar_response['Payload'].read())
         if payload.get('statusCode') != 200:
+            mensaje = 'Token inválido o expirado'
+            try:
+                mensaje = json.loads(payload.get('body')).get('error', mensaje)
+            except:
+                pass
             return {
                 'statusCode': 403,
-                'body': json.dumps({'error': 'Token inválido o expirado'})
+                'body': json.dumps({'error': mensaje})
             }
 
         usuario = payload.get('body', {})
@@ -46,20 +65,8 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Solo administradores pueden listar usuarios'})
             }
 
-        tenant_id = usuario['tenant_id']
-        query_params = event.get('queryStringParameters') or {}
-        rol = query_params.get('rol')
-        if rol not in ['instructor', 'cliente']:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({'error': 'Parámetro rol requerido: instructor o cliente'})
-            }
-
-        limit = int(query_params.get('limit', 10))
-        last_dni = query_params.get('last_dni')  # opcional
-
+        # Buscar usuarios
         partition_key = f"{tenant_id}#{rol}"
-
         condition = Key('tenant_id_rol').eq(partition_key)
         if last_dni:
             condition &= Key('dni').gt(last_dni)
@@ -77,7 +84,7 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'body': json.dumps({
                 'usuarios': items,
-                'last_dni': last_dni_return  # para próxima página
+                'last_dni': last_dni_return
             })
         }
 
@@ -85,5 +92,5 @@ def lambda_handler(event, context):
         logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            'body': json.dumps({'error': 'Error interno', 'detalle': str(e)})
         }
