@@ -34,7 +34,10 @@ def lambda_handler(event, context):
         tenant_id = body['tenant_id']
         rol = body['rol']
         last_dni = body['last_dni'] if 'last_dni' in body else None
-        limit = int(body['limit']) if 'limit' in body else 5
+        try:
+            limit = int(body['limit'])
+        except (KeyError, ValueError, TypeError):
+            limit = 5
 
         if not token or not tenant_id:
             return {
