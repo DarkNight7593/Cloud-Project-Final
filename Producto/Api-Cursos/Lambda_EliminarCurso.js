@@ -10,7 +10,11 @@ const FUNCION_ELIMINAR_HORARIO = process.env.FUNCION_ELIMINAR_HORARIO;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { curso_id, tenant_id } = event.queryStringParameters || {};
+    let body = event.body;
+    if (typeof body === 'string') {
+    body = JSON.parse(body);
+    }
+    const { curso_id, tenant_id } = body || {};
 
     if (!token || !tenant_id || !curso_id) {
       return {

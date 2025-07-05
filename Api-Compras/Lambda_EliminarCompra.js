@@ -84,8 +84,8 @@ exports.handler = async (event) => {
     await dynamodb.delete({
       TableName: TABLE_COMPRAS,
       Key: {
-        tenant_id_curso_id: tenantCursoKey,
-        dni_estado: `${dni}#${compra.estado}`
+        tenant_id_dni_estado: compra.tenant_id_dni_estado,
+        curso_id: compra.curso_id
       }
     }).promise();
 

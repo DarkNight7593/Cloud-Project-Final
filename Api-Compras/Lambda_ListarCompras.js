@@ -17,7 +17,7 @@ exports.handler = async (event) => {
       lastAlumnoDni
     } = event.queryStringParameters || {};
 
-    if (!token || !tenant_id || !curso_id) {
+    if (!token || !tenant_id ) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Se requieren token, tenant_id y curso_id' })
@@ -95,6 +95,12 @@ exports.handler = async (event) => {
 
     // === INSTRUCTOR o ADMIN ===
     if (rol === 'instructor' || rol === 'admin') {
+      if (!curso_id) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Se requiere curso_id' })
+      };
+      }
       const partitionKey = `${tenant_id}#${curso_id}`;
       let keyCondition = 'tenant_id_curso_id = :pk';
       const expressionValues = { ':pk': partitionKey };
