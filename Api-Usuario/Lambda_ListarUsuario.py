@@ -17,11 +17,11 @@ def lambda_handler(event, context):
     try:
         headers = event['headers']
         token = headers['Authorization']
-        query_params = event['queryStringParameters'] or {}
+        query_params = event.get('queryStringParameters') or {}
 
         tenant_id = query_params['tenant_id']
         rol = query_params['rol']
-        last_dni = query_params['last_dni']
+        last_dni = query_params['last_dni'] or {}
         limit = int(query_params['limit'], 10)
 
         if not token or not tenant_id:
