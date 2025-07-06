@@ -113,25 +113,6 @@ functions:
             responseModels:
               "application/json": ListarUsuarioResponse
 
-  crearorg:
-    handler: Lambda_CrearOrganizacion.lambda_handler
-    events:
-      - http:
-          path: /org/crear
-          method: post
-          cors: true
-          integration: lambda
-          documentation:
-            summary: Crear nueva organización (tenant)
-            description: |
-              Registra una nueva organización identificada por un tenant_id.
-              Debe incluirse dominio, correo y descripción.
-            tags: [Organización]
-            requestModels:
-              "application/json": CrearOrganizacionRequest
-            responseModels:
-              "application/json": RespuestaGenerica
-
 custom:
   documentation:
     models:
@@ -197,17 +178,6 @@ custom:
             full_name: { type: string }
             rol: { type: string }
             expires_at: { type: string }
-
-      - name: CrearOrganizacionRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, domain, descripcion, correo]
-          properties:
-            tenant_id: { type: string }
-            domain: { type: string }
-            descripcion: { type: string }
-            correo: { type: string }
 
       - name: ListarUsuarioRequest
         contentType: "application/json"
@@ -277,16 +247,4 @@ resources:
             KeyType: HASH
           - AttributeName: token
             KeyType: RANGE
-        BillingMode: PAY_PER_REQUEST
-
-    TablaOrg:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${sls:stage}-t_org
-        AttributeDefinitions:
-          - AttributeName: tenant_id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: tenant_id
-            KeyType: HASH
         BillingMode: PAY_PER_REQUEST

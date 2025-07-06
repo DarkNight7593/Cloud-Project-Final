@@ -1,0 +1,169 @@
+org: juanrodo
+service: api-org
+
+plugins:
+  - serverless-aws-documentation
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 60
+  iam:
+    role: arn:aws:iam::752087942362:role/LabRole
+  environment:
+    TABLE_ORG: ${sls:stage}-t_org
+    FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
+
+functions:
+  crearorg:
+    handler: Lambda_CrearOrganizacion.lambda_handler
+    events:
+      - http:
+          path: /org/crear
+          method: post
+          cors: true
+          integration: lambda
+          documentation:
+            summary: Crear nueva organización (tenant)
+            description: |
+              Registra una nueva organización con un `tenant_id` único.
+              Requiere los campos: domain, descripción y correo.
+            tags: [Organización]
+            requestModels:
+              "application/json": CrearOrganizacionRequest
+            responseModels:
+              "application/json": RespuestaGenerica
+
+  listarorg:
+    handler: Lambda_ListarOrg.lambda_handler
+    events:
+      - http:
+          path: /org/listar
+          method: get
+          cors: true
+          integration: lambda
+          documentation:
+            summary: Listar organizaciones
+            description: Retorna todas las organizaciones registradas.
+            tags: [Organización]
+            responseModels:
+              "application/json": ListaOrganizacionesResponse
+
+  buscarorg:
+    handler: Lambda_BuscarOrg.lambda_handler
+    events:
+      - http:
+          path: /org/buscar
+          method: post
+          cors: true
+          integration: lambda
+          documentation:
+            summary: Buscar organización por tenant_id
+            description: Devuelve los datos de una organización existente por su tenant_id.
+            tags: [Organización]
+            requestModels:
+              "application/json": BuscarOrganizacionRequest
+            responseModels:
+              "application/json": BuscarOrganizacionResponse
+
+  modificarorg:
+    handler: Lambda_ModiOrg.lambda_handler
+    events:
+      - http:
+          path: /org/modi
+          method: put
+          cors: true
+          integration: lambda
+          documentation:
+            summary: Modificar datos de una organización
+            description: |
+              Permite modificar los campos `domain`, `descripcion` o `correo` de una organización.
+              Requiere ser rol `admin` validado con un token.
+            tags: [Organización]
+            requestModels:
+              "application/json": ModificarOrganizacionRequest
+            responseModels:
+              "application/json": RespuestaGenerica
+
+custom:
+  documentation:
+    models:
+
+      - name: CrearOrganizacionRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id, domain, descripcion, correo]
+          properties:
+            tenant_id: { type: string }
+            domain: { type: string }
+            descripcion: { type: string }
+            correo: { type: string }
+
+      - name: ModificarOrganizacionRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id]
+          properties:
+            tenant_id: { type: string }
+            domain: { type: string }
+            descripcion: { type: string }
+            correo: { type: string }
+
+      - name: BuscarOrganizacionRequest
+        contentType: "application/json"
+        schema:
+          type: object
+          required: [tenant_id]
+          properties:
+            tenant_id: { type: string }
+
+      - name: BuscarOrganizacionResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            tenant_id: { type: string }
+            domain: { type: string }
+            descripcion: { type: string }
+            correo: { type: string }
+
+      - name: ListaOrganizacionesResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            organizaciones:
+              type: array
+              items:
+                type: object
+                properties:
+                  tenant_id: { type: string }
+                  domain: { type: string }
+                  descripcion: { type: string }
+                  correo: { type: string }
+            total: { type: integer }
+
+      - name: RespuestaGenerica
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            message: { type: string }
+            error: { type: string }
+
+resources:
+  Resources:
+    TablaOrg:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-t_org
+        AttributeDefinitions:
+          - AttributeName: tenant_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tenant_id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST

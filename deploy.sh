@@ -16,6 +16,16 @@ npm install serverless-aws-documentation
 sls deploy 
 cd ..
 
+echo -e "${GREEN}1. Desplegando Api-Org...${NC}"
+cd Api-Org
+# Solo si no existe package.json, inicializamos npm
+    if [ ! -f "package.json" ]; then
+        npm init -y
+    fi
+npm install serverless-aws-documentation
+sls deploy 
+cd ..
+
 # Función para instalar dependencias y desplegar
 deploy_node_service() {
     SERVICE_DIR=$1
