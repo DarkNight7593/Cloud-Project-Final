@@ -23,7 +23,6 @@ functions:
           path: /org/crear
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Crear nueva organización (tenant)
             description: |
@@ -42,7 +41,6 @@ functions:
           path: /org/listar
           method: get
           cors: true
-          integration: lambda
           documentation:
             summary: Listar organizaciones
             description: Retorna todas las organizaciones registradas.
@@ -57,7 +55,6 @@ functions:
           path: /org/buscar
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Buscar organización por tenant_id
             description: Devuelve los datos de una organización existente por su tenant_id.
@@ -74,7 +71,6 @@ functions:
           path: /org/modi
           method: put
           cors: true
-          integration: lambda
           documentation:
             summary: Modificar datos de una organización
             description: |

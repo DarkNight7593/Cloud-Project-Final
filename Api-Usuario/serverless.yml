@@ -25,7 +25,6 @@ functions:
           path: /usuario/crear
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Crear un nuevo usuario
             description: |
@@ -44,7 +43,6 @@ functions:
           path: /usuario/login
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Iniciar sesión de usuario
             description: |
@@ -63,7 +61,6 @@ functions:
           path: /usuario/logout
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Cerrar sesión de usuario
             description: |
@@ -82,7 +79,6 @@ functions:
           path: /usuario/validar
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Validar token de acceso
             description: |
@@ -101,7 +97,6 @@ functions:
           path: /usuario/listar
           method: post
           cors: true
-          integration: lambda
           documentation:
             summary: Listar usuarios por rol
             description: |
