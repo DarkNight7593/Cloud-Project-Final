@@ -209,6 +209,7 @@ resources:
 
 custom:
   documentation:
+    apiType: http
     models:
       CrearHorarioRequest:
         description: Modelo para crear un nuevo horario

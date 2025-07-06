@@ -88,8 +88,8 @@ functions:
 
 custom:
   documentation:
+    apiType: http
     models:
-
       - name: CrearOrganizacionRequest
         contentType: "application/json"
         schema:
@@ -100,7 +100,6 @@ custom:
             domain: { type: string }
             descripcion: { type: string }
             correo: { type: string }
-
       - name: ModificarOrganizacionRequest
         contentType: "application/json"
         schema:
@@ -111,7 +110,6 @@ custom:
             domain: { type: string }
             descripcion: { type: string }
             correo: { type: string }
-
       - name: BuscarOrganizacionRequest
         contentType: "application/json"
         schema:
@@ -119,7 +117,6 @@ custom:
           required: [tenant_id]
           properties:
             tenant_id: { type: string }
-
       - name: BuscarOrganizacionResponse
         contentType: "application/json"
         schema:
@@ -129,7 +126,6 @@ custom:
             domain: { type: string }
             descripcion: { type: string }
             correo: { type: string }
-
       - name: ListaOrganizacionesResponse
         contentType: "application/json"
         schema:
@@ -145,7 +141,6 @@ custom:
                   descripcion: { type: string }
                   correo: { type: string }
             total: { type: integer }
-
       - name: RespuestaGenerica
         contentType: "application/json"
         schema:
@@ -153,7 +148,6 @@ custom:
           properties:
             message: { type: string }
             error: { type: string }
-
 resources:
   Resources:
     TablaOrg:

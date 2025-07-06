@@ -194,6 +194,7 @@ resources:
 
 custom:
   documentation:
+    apiType: http
     models:
       CrearCursoRequest:
         type: object

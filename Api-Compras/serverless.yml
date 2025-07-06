@@ -118,6 +118,7 @@ functions:
 
 custom:
   documentation:
+    apiType: http
     models:
       - name: ComprarCursoRequest
         contentType: application/json
