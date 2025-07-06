@@ -14,6 +14,8 @@ cd Api-Usuario
     fi
 npm install serverless-aws-documentation
 sls deploy 
+sls documentation generate
+
 cd ..
 
 echo -e "${GREEN}1. Desplegando Api-Org...${NC}"
@@ -24,6 +26,8 @@ cd Api-Org
     fi
 npm install serverless-aws-documentation
 sls deploy 
+sls documentation generate
+
 cd ..
 
 # Función para instalar dependencias y desplegar
@@ -43,6 +47,8 @@ deploy_node_service() {
 
     # Desplegar
     sls deploy 
+    sls documentation generate
+
 
     cd ..
     cd ..
