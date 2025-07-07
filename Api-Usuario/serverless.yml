@@ -2,7 +2,7 @@ org: juanrodo
 service: api-usuario
 
 plugins:
-  - serverless-auto-swagger
+  - serverless-openapi-documenter
 
 provider:
   name: aws
@@ -25,6 +25,18 @@ functions:
           path: /usuario/crear
           method: post
           cors: true
+          summary: Crear usuario
+          description: Registra un nuevo usuario (admin o instructor)
+          requestBody:
+            description: Datos del nuevo usuario
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CrearUsuarioRequest'
+          responses:
+            '200':
+              description: Usuario creado correctamente
 
   login:
     handler: Lambda_LoginUsuario.lambda_handler
@@ -33,6 +45,23 @@ functions:
           path: /usuario/login
           method: post
           cors: true
+          summary: Login usuario
+          description: Inicia sesión con credenciales válidas
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/LoginRequest'
+          responses:
+            '200':
+              description: Inicio de sesión exitoso
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/LoginResponse'
+            '401':
+              description: Credenciales inválidas
 
   logout:
     handler: Lambda_Logout.lambda_handler
@@ -41,6 +70,17 @@ functions:
           path: /usuario/logout
           method: post
           cors: true
+          summary: Logout usuario
+          description: Cierra sesión y revoca el token
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/LogoutRequest'
+          responses:
+            '200':
+              description: Sesión cerrada correctamente
 
   validar:
     handler: Lambda_ValidarTokenAcceso.lambda_handler
@@ -49,6 +89,23 @@ functions:
           path: /usuario/validar
           method: post
           cors: true
+          summary: Validar token
+          description: Valida el token de acceso JWT
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ValidarTokenRequest'
+          responses:
+            '200':
+              description: Token válido
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ValidarTokenResponse'
+            '403':
+              description: Token inválido
 
   listar:
     handler: Lambda_ListarUsuario.lambda_handler
@@ -57,93 +114,108 @@ functions:
           path: /usuario/listar
           method: post
           cors: true
+          summary: Listar usuarios
+          description: Lista usuarios por rol (alumno o instructor)
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ListarUsuarioRequest'
+          responses:
+            '200':
+              description: Lista de usuarios
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ListarUsuarioResponse'
 
 custom:
-  autoswagger:
-    type: httpApi
-    generateSwaggerOnDeploy: true
+  openapi:
     title: API de Usuarios
-    description: Endpoints para autenticación y gestión de usuarios.
-    basePath: /${sls:stage}
-    swaggerPath: /swagger
-    swaggerJsonPath: /swagger.json
-    useStage: true
-    models:
-      CrearUsuarioRequest:
-        type: object
-        required: [tenant_id, dni, full_name, password, rol]
-        properties:
-          tenant_id: { type: string, description: ID del tenant }
-          dni: { type: string, description: DNI del usuario }
-          full_name: { type: string, description: Nombre completo }
-          password: { type: string, description: Contraseña en texto plano }
-          rol:
-            type: string
-            enum: [admin, instructor]
-            description: Rol del usuario
+    version: 1.0.0
+    description: Endpoints para autenticación y gestión de usuarios
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-usuarios.json
+    components:
+      schemas:
+        CrearUsuarioRequest:
+          type: object
+          required: [tenant_id, dni, full_name, password, rol]
+          properties:
+            tenant_id: { type: string, description: ID del tenant }
+            dni: { type: string, description: DNI del usuario }
+            full_name: { type: string, description: Nombre completo }
+            password: { type: string, description: Contraseña en texto plano }
+            rol:
+              type: string
+              enum: [admin, instructor]
+              description: Rol del usuario
 
-      LoginRequest:
-        type: object
-        required: [tenant_id, dni, password, rol]
-        properties:
-          tenant_id: { type: string }
-          dni: { type: string }
-          password: { type: string }
-          rol: { type: string }
+        LoginRequest:
+          type: object
+          required: [tenant_id, dni, password, rol]
+          properties:
+            tenant_id: { type: string }
+            dni: { type: string }
+            password: { type: string }
+            rol: { type: string }
 
-      LoginResponse:
-        type: object
-        properties:
-          message: { type: string }
-          token: { type: string }
-          expires_at: { type: string }
+        LoginResponse:
+          type: object
+          properties:
+            message: { type: string }
+            token: { type: string }
+            expires_at: { type: string }
 
-      LogoutRequest:
-        type: object
-        required: [tenant_id, token]
-        properties:
-          tenant_id: { type: string }
-          token: { type: string }
+        LogoutRequest:
+          type: object
+          required: [tenant_id, token]
+          properties:
+            tenant_id: { type: string }
+            token: { type: string }
 
-      ValidarTokenRequest:
-        type: object
-        required: [tenant_id, token]
-        properties:
-          tenant_id: { type: string }
-          token: { type: string }
+        ValidarTokenRequest:
+          type: object
+          required: [tenant_id, token]
+          properties:
+            tenant_id: { type: string }
+            token: { type: string }
 
-      ValidarTokenResponse:
-        type: object
-        properties:
-          message: { type: string }
-          dni: { type: string }
-          full_name: { type: string }
-          rol: { type: string }
-          expires_at: { type: string }
+        ValidarTokenResponse:
+          type: object
+          properties:
+            message: { type: string }
+            dni: { type: string }
+            full_name: { type: string }
+            rol: { type: string }
+            expires_at: { type: string }
 
-      ListarUsuarioRequest:
-        type: object
-        required: [tenant_id, rol]
-        properties:
-          tenant_id: { type: string }
-          rol:
-            type: string
-            enum: [instructor, alumno]
-          last_dni: { type: string }
-          limit: { type: integer }
+        ListarUsuarioRequest:
+          type: object
+          required: [tenant_id, rol]
+          properties:
+            tenant_id: { type: string }
+            rol:
+              type: string
+              enum: [instructor, alumno]
+            last_dni: { type: string }
+            limit: { type: integer }
 
-      ListarUsuarioResponse:
-        type: object
-        properties:
-          usuarios:
-            type: array
-            items:
-              type: object
-              properties:
-                dni: { type: string }
-                full_name: { type: string }
-                rol: { type: string }
-          last_dni: { type: string }
+        ListarUsuarioResponse:
+          type: object
+          properties:
+            usuarios:
+              type: array
+              items:
+                type: object
+                properties:
+                  dni: { type: string }
+                  full_name: { type: string }
+                  rol: { type: string }
+            last_dni: { type: string }
 
 resources:
   Resources:

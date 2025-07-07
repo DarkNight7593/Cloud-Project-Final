@@ -2,7 +2,7 @@ org: juanrodo
 service: api-horario
 
 plugins:
-  - serverless-auto-swagger
+  - serverless-openapi-documenter
 
 provider:
   name: aws
@@ -24,6 +24,17 @@ functions:
           path: /horario/crear
           method: post
           cors: true
+          summary: Crear horario
+          description: Crea un horario para un curso dado.
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CrearHorarioRequest'
+          responses:
+            '200':
+              description: Horario creado exitosamente
 
   listarHorario:
     handler: Lambda_ListarHorario.handler
@@ -32,6 +43,15 @@ functions:
           path: /horario/listar
           method: get
           cors: true
+          summary: Listar horarios
+          description: Lista todos los horarios disponibles.
+          responses:
+            '200':
+              description: Lista de horarios
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ListarHorariosResponse'
 
   obtenerHorario:
     handler: Lambda_BuscarHorario.handler
@@ -40,6 +60,15 @@ functions:
           path: /horario/buscar
           method: get
           cors: true
+          summary: Obtener horario
+          description: Obtiene los detalles de un horario específico por ID.
+          responses:
+            '200':
+              description: Horario encontrado
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/HorarioResponse'
 
   actualizarHorario:
     handler: Lambda_ModiHorario.handler
@@ -48,6 +77,17 @@ functions:
           path: /horario/modificar
           method: put
           cors: true
+          summary: Modificar horario
+          description: Modifica los detalles de un horario existente.
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ActualizarHorarioRequest'
+          responses:
+            '200':
+              description: Horario actualizado correctamente
 
   eliminarHorario:
     handler: Lambda_EliminarHorario.handler
@@ -56,6 +96,108 @@ functions:
           path: /horario/eliminar
           method: delete
           cors: true
+          summary: Eliminar horario
+          description: Elimina un horario específico.
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/EliminarHorarioRequest'
+          responses:
+            '200':
+              description: Horario eliminado exitosamente
+
+custom:
+  openapi:
+    title: API de Horarios
+    version: 1.0.0
+    description: Endpoints para gestión de horarios de cursos: crear, listar, modificar y eliminar.
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-horarios.json
+    components:
+      schemas:
+        CrearHorarioRequest:
+          type: object
+          required: [tenant_id, curso_id, dias, inicio_hora, fin_hora]
+          properties:
+            tenant_id:
+              type: string
+            curso_id:
+              type: string
+            dias:
+              type: array
+              items:
+                type: string
+            inicio_hora:
+              type: string
+              example: "08:00"
+            fin_hora:
+              type: string
+              example: "10:00"
+
+        ActualizarHorarioRequest:
+          type: object
+          required: [tenant_id, horario_id, dias, inicio_hora, fin_hora]
+          properties:
+            tenant_id:
+              type: string
+            horario_id:
+              type: string
+            dias:
+              type: array
+              items:
+                type: string
+            inicio_hora:
+              type: string
+              example: "09:00"
+            fin_hora:
+              type: string
+              example: "11:00"
+
+        EliminarHorarioRequest:
+          type: object
+          required: [tenant_id, horario_id]
+          properties:
+            tenant_id:
+              type: string
+            horario_id:
+              type: string
+
+        HorarioResponse:
+          type: object
+          properties:
+            horario_id:
+              type: string
+            curso_id:
+              type: string
+            dias:
+              type: array
+              items:
+                type: string
+            inicio_hora:
+              type: string
+            fin_hora:
+              type: string
+            tenant_id:
+              type: string
+
+        ListarHorariosResponse:
+          type: object
+          properties:
+            horarios:
+              type: array
+              items:
+                $ref: "#/components/schemas/HorarioResponse"
+            paginacion:
+              type: object
+              properties:
+                total:
+                  type: integer
+                lastHorarioId:
+                  type: string
 
 resources:
   Resources:
@@ -85,70 +227,3 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-
-custom:
-  autoswagger:
-    type: httpApi
-    generateSwaggerOnDeploy: true
-    title: API de Horarios
-    description: Endpoints para gestión de horarios de cursos: crear, listar, modificar y eliminar.
-    basePath: /${sls:stage}
-    useStage: true
-    swaggerPath: /swagger
-    swaggerJsonPath: /swagger.json
-    models:
-      CrearHorarioRequest:
-        type: object
-        required: [tenant_id, curso_id, dias, inicio_hora, fin_hora]
-        properties:
-          tenant_id: { type: string }
-          curso_id: { type: string }
-          dias:
-            type: array
-            items: { type: string }
-          inicio_hora: { type: string, example: "08:00" }
-          fin_hora: { type: string, example: "10:00" }
-
-      ActualizarHorarioRequest:
-        type: object
-        required: [tenant_id, horario_id, dias, inicio_hora, fin_hora]
-        properties:
-          tenant_id: { type: string }
-          horario_id: { type: string }
-          dias:
-            type: array
-            items: { type: string }
-          inicio_hora: { type: string, example: "09:00" }
-          fin_hora: { type: string, example: "11:00" }
-
-      EliminarHorarioRequest:
-        type: object
-        required: [tenant_id, horario_id]
-        properties:
-          tenant_id: { type: string }
-          horario_id: { type: string }
-
-      HorarioResponse:
-        type: object
-        properties:
-          horario_id: { type: string }
-          curso_id: { type: string }
-          dias:
-            type: array
-            items: { type: string }
-          inicio_hora: { type: string }
-          fin_hora: { type: string }
-          tenant_id: { type: string }
-
-      ListarHorariosResponse:
-        type: object
-        properties:
-          horarios:
-            type: array
-            items:
-              $ref: "#/components/schemas/HorarioResponse"
-          paginacion:
-            type: object
-            properties:
-              total: { type: integer }
-              lastHorarioId: { type: string }

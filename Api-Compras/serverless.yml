@@ -2,7 +2,7 @@ org: juanrodo
 service: api-compras
 
 plugins:
-  - serverless-auto-swagger
+  - serverless-openapi-documenter
 
 provider:
   name: aws
@@ -22,75 +22,108 @@ provider:
 functions:
   comprarCurso:
     handler: Lambda_Comprar.handler
-    description: >
-      Registra una compra para un curso por parte de un alumno autenticado.
-      Valida el token JWT, verifica que el curso y horario existan, y que no haya una compra previa del mismo curso.
     events:
       - http:
           path: /compra/comprar
           method: post
           cors: true
+          summary: Comprar curso
+          description: >
+            Registra una compra de curso para un alumno autenticado. 
+            Valida el token JWT, verifica que el curso y horario existan, 
+            y que no haya una compra previa.
+          requestBody:
+            description: Datos necesarios para registrar la compra.
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ComprarCurso'
+          responses:
+            '200':
+              description: Compra realizada con éxito.
+            '400':
+              description: Error en los datos enviados.
 
   listarCompras:
     handler: Lambda_ListarCompras.handler
-    description: >
-      Lista las compras realizadas por un alumno autenticado, o por curso si es instructor o administrador.
-      Permite paginar resultados y filtrar por estado.
     events:
       - http:
           path: /compra/listar
           method: get
           cors: true
+          summary: Listar compras
+          description: >
+            Lista las compras realizadas por un alumno autenticado,
+            o por curso si es instructor o administrador.
+          responses:
+            '200':
+              description: Lista de compras devuelta correctamente
+            '401':
+              description: Token inválido o expirado
 
   eliminarCompra:
     handler: Lambda_EliminarCompra.handler
-    description: >
-      Elimina una compra (estado `reservado` o `inscrito`) hecha por un alumno.
-      Requiere validación del token y que el alumno sea el dueño de la compra.
     events:
       - http:
           path: /compra/eliminar
           method: delete
           cors: true
+          summary: Eliminar compra
+          description: >
+            Elimina una compra realizada por el alumno autenticado si se encuentra
+            en estado 'reservado' o 'inscrito'.
+          requestBody:
+            description: Datos necesarios para eliminar la compra.
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/EliminarCompra'
+          responses:
+            '200':
+              description: Compra eliminada exitosamente
+            '403':
+              description: No autorizado para eliminar la compra
 
 custom:
-  autoswagger:
-    type: httpApi
-    generateSwaggerOnDeploy: true
+  openapi:
     title: API de Compras
+    version: 1.0.0
     description: API para registrar, listar y eliminar compras de cursos por alumnos.
-    basePath: /${sls:stage}
-    swaggerPath: /swagger
-    swaggerJsonPath: /swagger.json
-    useStage: true
-    models:
-      ComprarCursoRequest:
-        type: object
-        required: [tenant_id, curso_id, horario_id, estado]
-        properties:
-          tenant_id:
-            type: string
-            description: ID único del tenant (organización)
-          curso_id:
-            type: string
-            description: ID del curso que se desea comprar
-          horario_id:
-            type: string
-            description: ID del horario seleccionado
-          estado:
-            type: string
-            enum: [reservado, inscrito]
-            description: Estado inicial de la compra (`reservado` o `inscrito`)
-      EliminarCompraRequest:
-        type: object
-        required: [tenant_id, curso_id]
-        properties:
-          tenant_id:
-            type: string
-            description: ID del tenant (organización)
-          curso_id:
-            type: string
-            description: ID del curso cuya compra se desea eliminar
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-compras.json
+    components:
+      schemas:
+        ComprarCurso:
+          type: object
+          required: [tenant_id, curso_id, horario_id, estado]
+          properties:
+            tenant_id:
+              type: string
+              description: ID del tenant (organización)
+            curso_id:
+              type: string
+              description: ID del curso a comprar
+            horario_id:
+              type: string
+              description: ID del horario seleccionado
+            estado:
+              type: string
+              enum: [reservado, inscrito]
+              description: Estado inicial de la compra
+        EliminarCompra:
+          type: object
+          required: [tenant_id, curso_id]
+          properties:
+            tenant_id:
+              type: string
+              description: ID del tenant (organización)
+            curso_id:
+              type: string
+              description: ID del curso a eliminar
 
 resources:
   Resources:

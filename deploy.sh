@@ -12,8 +12,10 @@ cd Api-Usuario
     if [ ! -f "package.json" ]; then
         npm init -y
     fi
-npm install -D serverless-auto-swagger
+npm install --save-dev serverless-openapi-documenter
 sls deploy 
+sls openapi generate -o openapi.json
+
 
 cd ..
 
@@ -23,8 +25,10 @@ cd Api-Org
     if [ ! -f "package.json" ]; then
         npm init -y
     fi
-npm install -D serverless-auto-swagger
+npm install --save-dev serverless-openapi-documenter
 sls deploy 
+sls openapi generate -o openapi.json
+
 
 cd ..
 
@@ -41,11 +45,11 @@ deploy_node_service() {
 
     # Asegurarse que aws-sdk esté instalado
     npm install aws-sdk
-    npm install -D serverless-auto-swagger
+    npm install --save-dev serverless-openapi-documenter
 
     # Desplegar
     sls deploy 
-
+    sls openapi generate -o openapi.json
 
     cd ..
     cd ..
