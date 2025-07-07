@@ -14,9 +14,8 @@ provider:
   environment:
     TABLE_USER: ${sls:stage}-t_usuario
     TABLE_TOKEN: ${sls:stage}-t_token
-    TABLE_ORG: ${sls:stage}-t_org
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
-
+    FUNCION_ORG: api-org-${sls:stage}-buscarorg
 functions:
   crear:
     handler: Lambda_CrearUsuario.lambda_handler
@@ -25,6 +24,52 @@ functions:
           path: /usuario/crear
           method: post
           cors: true
+
+  login:
+    handler: Lambda_LoginUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/login
+          method: post
+          cors: true
+
+  logout:
+    handler: Lambda_Logout.lambda_handler
+    events:
+      - http:
+          path: /usuario/logout
+          method: post
+          cors: true
+
+  validar:
+    handler: Lambda_ValidarTokenAcceso.lambda_handler
+    events:
+      - http:
+          path: /usuario/validar
+          method: post
+          cors: true
+
+  listar:
+    handler: Lambda_ListarUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/listar
+          method: post
+          cors: true
+
+custom:
+  openapi:
+    title: API de Usuarios
+    version: 1.0.0
+    description: Endpoints para autenticación y gestión de usuarios
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-usuarios.json
+
+    paths:
+      /usuario/crear:
+        post:
           summary: Crear usuario
           description: Registra un nuevo usuario (admin o instructor)
           requestBody:
@@ -38,13 +83,8 @@ functions:
             '200':
               description: Usuario creado correctamente
 
-  login:
-    handler: Lambda_LoginUsuario.lambda_handler
-    events:
-      - http:
-          path: /usuario/login
-          method: post
-          cors: true
+      /usuario/login:
+        post:
           summary: Login usuario
           description: Inicia sesión con credenciales válidas
           requestBody:
@@ -63,13 +103,8 @@ functions:
             '401':
               description: Credenciales inválidas
 
-  logout:
-    handler: Lambda_Logout.lambda_handler
-    events:
-      - http:
-          path: /usuario/logout
-          method: post
-          cors: true
+      /usuario/logout:
+        post:
           summary: Logout usuario
           description: Cierra sesión y revoca el token
           requestBody:
@@ -82,13 +117,8 @@ functions:
             '200':
               description: Sesión cerrada correctamente
 
-  validar:
-    handler: Lambda_ValidarTokenAcceso.lambda_handler
-    events:
-      - http:
-          path: /usuario/validar
-          method: post
-          cors: true
+      /usuario/validar:
+        post:
           summary: Validar token
           description: Valida el token de acceso JWT
           requestBody:
@@ -107,13 +137,8 @@ functions:
             '403':
               description: Token inválido
 
-  listar:
-    handler: Lambda_ListarUsuario.lambda_handler
-    events:
-      - http:
-          path: /usuario/listar
-          method: post
-          cors: true
+      /usuario/listar:
+        post:
           summary: Listar usuarios
           description: Lista usuarios por rol (alumno o instructor)
           requestBody:
@@ -130,25 +155,24 @@ functions:
                   schema:
                     $ref: '#/components/schemas/ListarUsuarioResponse'
 
-custom:
-  openapi:
-    title: API de Usuarios
-    version: 1.0.0
-    description: Endpoints para autenticación y gestión de usuarios
-    output: openapi.json
-    format: json
-    openApiVersion: 3.0.3
-    postmanCollection: postman-usuarios.json
     components:
       schemas:
         CrearUsuarioRequest:
           type: object
           required: [tenant_id, dni, full_name, password, rol]
           properties:
-            tenant_id: { type: string, description: ID del tenant }
-            dni: { type: string, description: DNI del usuario }
-            full_name: { type: string, description: Nombre completo }
-            password: { type: string, description: Contraseña en texto plano }
+            tenant_id:
+              type: string
+              description: ID del tenant
+            dni:
+              type: string
+              description: DNI del usuario
+            full_name:
+              type: string
+              description: Nombre completo
+            password:
+              type: string
+              description: Contraseña en texto plano
             rol:
               type: string
               enum: [admin, instructor]

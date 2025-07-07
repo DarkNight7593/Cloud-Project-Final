@@ -23,6 +23,44 @@ functions:
           path: /org/crear
           method: post
           cors: true
+
+  listarorg:
+    handler: Lambda_ListarOrg.lambda_handler
+    events:
+      - http:
+          path: /org/listar
+          method: get
+          cors: true
+
+  buscarorg:
+    handler: Lambda_BuscarOrg.lambda_handler
+    events:
+      - http:
+          path: /org/buscar
+          method: post
+          cors: true
+
+  modificarorg:
+    handler: Lambda_ModiOrg.lambda_handler
+    events:
+      - http:
+          path: /org/modi
+          method: put
+          cors: true
+
+custom:
+  openapi:
+    title: API Organización
+    version: 1.0.0
+    description: Endpoints para gestionar organizaciones (tenants)
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-org.json
+
+    paths:
+      /org/crear:
+        post:
           summary: Crear organización
           description: Crear una nueva organización (tenant).
           requestBody:
@@ -40,13 +78,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/RespuestaGenerica'
 
-  listarorg:
-    handler: Lambda_ListarOrg.lambda_handler
-    events:
-      - http:
-          path: /org/listar
-          method: get
-          cors: true
+      /org/listar:
+        get:
           summary: Listar organizaciones
           description: Lista todas las organizaciones registradas.
           responses:
@@ -57,13 +90,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/ListaOrganizacionesResponse'
 
-  buscarorg:
-    handler: Lambda_BuscarOrg.lambda_handler
-    events:
-      - http:
-          path: /org/buscar
-          method: post
-          cors: true
+      /org/buscar:
+        post:
           summary: Buscar organización
           description: Busca una organización por su `tenant_id`.
           requestBody:
@@ -81,13 +109,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/BuscarOrganizacionResponse'
 
-  modificarorg:
-    handler: Lambda_ModiOrg.lambda_handler
-    events:
-      - http:
-          path: /org/modi
-          method: put
-          cors: true
+      /org/modi:
+        put:
           summary: Modificar organización
           description: Modifica los datos de una organización existente.
           requestBody:
@@ -105,15 +128,6 @@ functions:
                   schema:
                     $ref: '#/components/schemas/RespuestaGenerica'
 
-custom:
-  openapi:
-    title: API Organización
-    version: 1.0.0
-    description: Endpoints para gestionar organizaciones (tenants)
-    output: openapi.json
-    format: json
-    openApiVersion: 3.0.3
-    postmanCollection: postman-org.json
     components:
       schemas:
         CrearOrganizacionRequest:

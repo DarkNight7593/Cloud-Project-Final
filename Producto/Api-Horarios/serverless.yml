@@ -24,6 +24,52 @@ functions:
           path: /horario/crear
           method: post
           cors: true
+
+  listarHorario:
+    handler: Lambda_ListarHorario.handler
+    events:
+      - http:
+          path: /horario/listar
+          method: get
+          cors: true
+
+  obtenerHorario:
+    handler: Lambda_BuscarHorario.handler
+    events:
+      - http:
+          path: /horario/buscar
+          method: get
+          cors: true
+
+  actualizarHorario:
+    handler: Lambda_ModiHorario.handler
+    events:
+      - http:
+          path: /horario/modificar
+          method: put
+          cors: true
+
+  eliminarHorario:
+    handler: Lambda_EliminarHorario.handler
+    events:
+      - http:
+          path: /horario/eliminar
+          method: delete
+          cors: true
+
+custom:
+  openapi:
+    title: API de Horarios
+    version: 1.0.0
+    description: Endpoints para gestión de horarios de cursos: crear, listar, modificar y eliminar.
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-horarios.json
+
+    paths:
+      /horario/crear:
+        post:
           summary: Crear horario
           description: Crea un horario para un curso dado.
           requestBody:
@@ -36,13 +82,8 @@ functions:
             '200':
               description: Horario creado exitosamente
 
-  listarHorario:
-    handler: Lambda_ListarHorario.handler
-    events:
-      - http:
-          path: /horario/listar
-          method: get
-          cors: true
+      /horario/listar:
+        get:
           summary: Listar horarios
           description: Lista todos los horarios disponibles.
           responses:
@@ -53,13 +94,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/ListarHorariosResponse'
 
-  obtenerHorario:
-    handler: Lambda_BuscarHorario.handler
-    events:
-      - http:
-          path: /horario/buscar
-          method: get
-          cors: true
+      /horario/buscar:
+        get:
           summary: Obtener horario
           description: Obtiene los detalles de un horario específico por ID.
           responses:
@@ -70,13 +106,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/HorarioResponse'
 
-  actualizarHorario:
-    handler: Lambda_ModiHorario.handler
-    events:
-      - http:
-          path: /horario/modificar
-          method: put
-          cors: true
+      /horario/modificar:
+        put:
           summary: Modificar horario
           description: Modifica los detalles de un horario existente.
           requestBody:
@@ -89,13 +120,8 @@ functions:
             '200':
               description: Horario actualizado correctamente
 
-  eliminarHorario:
-    handler: Lambda_EliminarHorario.handler
-    events:
-      - http:
-          path: /horario/eliminar
-          method: delete
-          cors: true
+      /horario/eliminar:
+        delete:
           summary: Eliminar horario
           description: Elimina un horario específico.
           requestBody:
@@ -108,15 +134,6 @@ functions:
             '200':
               description: Horario eliminado exitosamente
 
-custom:
-  openapi:
-    title: API de Horarios
-    version: 1.0.0
-    description: Endpoints para gestión de horarios de cursos: crear, listar, modificar y eliminar.
-    output: openapi.json
-    format: json
-    openApiVersion: 3.0.3
-    postmanCollection: postman-horarios.json
     components:
       schemas:
         CrearHorarioRequest:

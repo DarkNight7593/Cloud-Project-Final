@@ -26,6 +26,57 @@ functions:
           path: /curso/crear
           method: post
           cors: true
+
+  listarCursos:
+    handler: Lambda_ListarCursos.handler
+    events:
+      - http:
+          path: /curso/listar
+          method: get
+          cors: true
+
+  obtenerCurso:
+    handler: Lambda_BuscarCurso.handler
+    events:
+      - http:
+          path: /curso/buscar
+          method: get
+          cors: true
+
+  actualizarCurso:
+    handler: Lambda_ModiCurso.handler
+    events:
+      - http:
+          path: /curso/modificar
+          method: put
+          cors: true
+
+  eliminarCurso:
+    handler: Lambda_EliminarCurso.handler
+    events:
+      - http:
+          path: /curso/eliminar
+          method: delete
+          cors: true
+
+package:
+  individually: false
+  include:
+    - '**/*.js'
+
+custom:
+  openapi:
+    title: API de Cursos
+    version: 1.0.0
+    description: Endpoints para crear, listar, modificar y eliminar cursos en un tenant educativo.
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-cursos.json
+
+    paths:
+      /curso/crear:
+        post:
           summary: Crear curso
           description: Crea un nuevo curso para el tenant especificado.
           requestBody:
@@ -39,13 +90,8 @@ functions:
             '200':
               description: Curso creado exitosamente
 
-  listarCursos:
-    handler: Lambda_ListarCursos.handler
-    events:
-      - http:
-          path: /curso/listar
-          method: get
-          cors: true
+      /curso/listar:
+        get:
           summary: Listar cursos
           description: Lista todos los cursos del tenant autenticado.
           responses:
@@ -56,13 +102,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/ListarCursosResponse'
 
-  obtenerCurso:
-    handler: Lambda_BuscarCurso.handler
-    events:
-      - http:
-          path: /curso/buscar
-          method: get
-          cors: true
+      /curso/buscar:
+        get:
           summary: Obtener curso
           description: Obtiene la información detallada de un curso específico por ID.
           responses:
@@ -73,13 +114,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/CursoResponse'
 
-  actualizarCurso:
-    handler: Lambda_ModiCurso.handler
-    events:
-      - http:
-          path: /curso/modificar
-          method: put
-          cors: true
+      /curso/modificar:
+        put:
           summary: Actualizar curso
           description: Modifica uno o más campos de un curso.
           requestBody:
@@ -96,13 +132,8 @@ functions:
                   schema:
                     $ref: '#/components/schemas/ActualizarCursoResponse'
 
-  eliminarCurso:
-    handler: Lambda_EliminarCurso.handler
-    events:
-      - http:
-          path: /curso/eliminar
-          method: delete
-          cors: true
+      /curso/eliminar:
+        delete:
           summary: Eliminar curso
           description: Elimina un curso y sus horarios asociados.
           requestBody:
@@ -119,20 +150,6 @@ functions:
                   schema:
                     $ref: '#/components/schemas/EliminarCursoResponse'
 
-package:
-  individually: false
-  include:
-    - '**/*.js'
-
-custom:
-  openapi:
-    title: API de Cursos
-    version: 1.0.0
-    description: Endpoints para crear, listar, modificar y eliminar cursos en un tenant educativo.
-    output: openapi.json
-    format: json
-    openApiVersion: 3.0.3
-    postmanCollection: postman-cursos.json
     components:
       schemas:
         CrearCursoRequest:

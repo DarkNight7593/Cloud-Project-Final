@@ -29,12 +29,23 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Faltan tenant_id, dni, full_name, password o rol'})
             }
 
-        # 🔍 1️⃣ Validar que el tenant exista en la tabla de organizaciones
-        dynamodb = boto3.resource('dynamodb')
-        tabla_org = dynamodb.Table(os.environ["TABLE_ORG"])
-        org_result = tabla_org.get_item(Key={'tenant_id': tenant_id})
+        # 🔍 1️⃣ Validar tenant usando Lambda externo FUNCION_ORG
+        lambda_client = boto3.client('lambda')
+        FUNCION_ORG = os.environ['FUNCION_ORG']
 
-        if 'Item' not in org_result:
+        buscar_org_resp = lambda_client.invoke(
+            FunctionName=FUNCION_ORG,
+            InvocationType='RequestResponse',
+            Payload=json.dumps({
+                'body': {
+                    'tenant_id': tenant_id
+                }
+            })
+        )
+
+        buscar_org_payload = json.loads(buscar_org_resp['Payload'].read())
+
+        if buscar_org_payload.get('statusCode') != 200:
             return {
                 'statusCode': 404,
                 'headers': {'Content-Type': 'application/json'},
@@ -42,6 +53,7 @@ def lambda_handler(event, context):
             }
 
         # ⚙️ Preparar tabla de usuarios
+        dynamodb = boto3.resource('dynamodb')
         tabla_usuarios = dynamodb.Table(os.environ["TABLE_USER"])
         tenant_id_rol = f"{tenant_id}#{rol}"
 
@@ -58,7 +70,7 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': 'Ya existe un administrador registrado para este tenant'})
                 }
 
-        # ✅ 3️⃣ Validar token si se intenta crear un instructor (solo admins pueden hacerlo)
+        # ✅ 3️⃣ Validar token si se intenta crear un instructor
         if rol == "instructor":
             token = event.get('headers', {}).get('Authorization')
             if not token:
@@ -68,9 +80,7 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': 'Token requerido para crear un instructor'})
                 }
 
-            lambda_client = boto3.client('lambda')
             FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
-
             validacion = lambda_client.invoke(
                 FunctionName=FUNCION_VALIDAR,
                 InvocationType='RequestResponse',

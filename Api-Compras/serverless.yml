@@ -1,6 +1,8 @@
 org: juanrodo
 service: api-compras
 
+frameworkVersion: '4'
+
 plugins:
   - serverless-openapi-documenter
 
@@ -8,7 +10,7 @@ provider:
   name: aws
   runtime: nodejs22.x
   memorySize: 1024
-  timeout: 60
+  timeout: 30
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
@@ -27,13 +29,41 @@ functions:
           path: /compra/comprar
           method: post
           cors: true
+
+  listarCompras:
+    handler: Lambda_ListarCompras.handler
+    events:
+      - http:
+          path: /compra/listar
+          method: get
+          cors: true
+
+  eliminarCompra:
+    handler: Lambda_EliminarCompra.handler
+    events:
+      - http:
+          path: /compra/eliminar
+          method: delete
+          cors: true
+
+custom:
+  openapi:
+    title: API de Compras
+    version: 1.0.0
+    description: API para registrar, listar y eliminar compras de cursos por alumnos.
+    output: openapi.json
+    format: json
+    openApiVersion: 3.0.3
+    postmanCollection: postman-compras.json
+
+    paths:
+      /compra/comprar:
+        post:
           summary: Comprar curso
-          description: >
-            Registra una compra de curso para un alumno autenticado. 
-            Valida el token JWT, verifica que el curso y horario existan, 
-            y que no haya una compra previa.
+          description: |
+            Registra una compra de curso para un alumno autenticado.
+            Valida el token JWT, verifica curso y horario, y que no haya compra previa.
           requestBody:
-            description: Datos necesarios para registrar la compra.
             required: true
             content:
               application/json:
@@ -45,15 +75,10 @@ functions:
             '400':
               description: Error en los datos enviados.
 
-  listarCompras:
-    handler: Lambda_ListarCompras.handler
-    events:
-      - http:
-          path: /compra/listar
-          method: get
-          cors: true
+      /compra/listar:
+        get:
           summary: Listar compras
-          description: >
+          description: |
             Lista las compras realizadas por un alumno autenticado,
             o por curso si es instructor o administrador.
           responses:
@@ -62,19 +87,12 @@ functions:
             '401':
               description: Token inválido o expirado
 
-  eliminarCompra:
-    handler: Lambda_EliminarCompra.handler
-    events:
-      - http:
-          path: /compra/eliminar
-          method: delete
-          cors: true
+      /compra/eliminar:
+        delete:
           summary: Eliminar compra
-          description: >
-            Elimina una compra realizada por el alumno autenticado si se encuentra
-            en estado 'reservado' o 'inscrito'.
+          description: |
+            Elimina una compra realizada por el alumno autenticado si está en estado 'reservado' o 'inscrito'.
           requestBody:
-            description: Datos necesarios para eliminar la compra.
             required: true
             content:
               application/json:
@@ -86,15 +104,6 @@ functions:
             '403':
               description: No autorizado para eliminar la compra
 
-custom:
-  openapi:
-    title: API de Compras
-    version: 1.0.0
-    description: API para registrar, listar y eliminar compras de cursos por alumnos.
-    output: openapi.json
-    format: json
-    openApiVersion: 3.0.3
-    postmanCollection: postman-compras.json
     components:
       schemas:
         ComprarCurso:
@@ -114,6 +123,7 @@ custom:
               type: string
               enum: [reservado, inscrito]
               description: Estado inicial de la compra
+
         EliminarCompra:
           type: object
           required: [tenant_id, curso_id]
