@@ -2,7 +2,7 @@ org: juanrodo
 service: api-org
 
 plugins:
-  - serverless-openapi-documenter
+  - serverless-openapi-documentation
 
 provider:
   name: aws
@@ -15,176 +15,54 @@ provider:
     TABLE_ORG: ${sls:stage}-t_org
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
 
-functions:
-  crearorg:
-    handler: Lambda_CrearOrganizacion.lambda_handler
-    events:
-      - http:
-          path: /org/crear
-          method: post
-          cors: true
-
-  listarorg:
-    handler: Lambda_ListarOrg.lambda_handler
-    events:
-      - http:
-          path: /org/listar
-          method: get
-          cors: true
-
-  buscarorg:
-    handler: Lambda_BuscarOrg.lambda_handler
-    events:
-      - http:
-          path: /org/buscar
-          method: post
-          cors: true
-
-  modificarorg:
-    handler: Lambda_ModiOrg.lambda_handler
-    events:
-      - http:
-          path: /org/modi
-          method: put
-          cors: true
-
 custom:
-  openapi:
-    title: API Organización
+  documentation:
     version: 1.0.0
+    title: API Organización
     description: Endpoints para gestionar organizaciones (tenants)
-    output: openapi.json
-    format: json
-    openApiVersion: 3.0.3
-    postmanCollection: postman-org.json
-
-    paths:
-      /org/crear:
-        post:
-          summary: Crear organización
-          description: Crear una nueva organización (tenant).
-          requestBody:
-            description: Datos de la organización a crear.
-            required: true
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/CrearOrganizacionRequest'
-          responses:
-            '200':
-              description: Organización creada exitosamente
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/RespuestaGenerica'
-
-      /org/listar:
-        get:
-          summary: Listar organizaciones
-          description: Lista todas las organizaciones registradas.
-          responses:
-            '200':
-              description: Lista de organizaciones
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/ListaOrganizacionesResponse'
-
-      /org/buscar:
-        post:
-          summary: Buscar organización
-          description: Busca una organización por su `tenant_id`.
-          requestBody:
-            description: Datos de búsqueda
-            required: true
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/BuscarOrganizacionRequest'
-          responses:
-            '200':
-              description: Organización encontrada
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/BuscarOrganizacionResponse'
-
-      /org/modi:
-        put:
-          summary: Modificar organización
-          description: Modifica los datos de una organización existente.
-          requestBody:
-            description: Datos para modificar una organización.
-            required: true
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/ModificarOrganizacionRequest'
-          responses:
-            '200':
-              description: Organización modificada exitosamente
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/RespuestaGenerica'
-
-    components:
-      schemas:
-        CrearOrganizacionRequest:
+    models:
+      - name: CrearOrganizacionRequest
+        contentType: application/json
+        schema:
           type: object
           required: [tenant_id, domain, descripcion, correo]
           properties:
             tenant_id:
               type: string
-              description: ID único de la organización
             domain:
               type: string
-              description: Dominio asociado
             descripcion:
               type: string
-              description: Descripción de la organización
             correo:
               type: string
-              description: Correo de contacto
 
-        ModificarOrganizacionRequest:
+      - name: ModificarOrganizacionRequest
+        contentType: application/json
+        schema:
           type: object
           required: [tenant_id]
           properties:
             tenant_id:
               type: string
-              description: ID de la organización a modificar
             domain:
               type: string
-              description: Nuevo dominio
             descripcion:
               type: string
-              description: Nueva descripción
             correo:
               type: string
-              description: Nuevo correo
 
-        BuscarOrganizacionRequest:
+      - name: BuscarOrganizacionRequest
+        contentType: application/json
+        schema:
           type: object
           required: [tenant_id]
           properties:
             tenant_id:
               type: string
-              description: ID de la organización a buscar
 
-        BuscarOrganizacionResponse:
-          type: object
-          properties:
-            tenant_id:
-              type: string
-            domain:
-              type: string
-            descripcion:
-              type: string
-            correo:
-              type: string
-
-        ListaOrganizacionesResponse:
+      - name: ListaOrganizacionesResponse
+        contentType: application/json
+        schema:
           type: object
           properties:
             organizaciones:
@@ -202,17 +80,114 @@ custom:
                     type: string
             total:
               type: integer
-              description: Total de organizaciones devueltas
 
-        RespuestaGenerica:
+      - name: BuscarOrganizacionResponse
+        contentType: application/json
+        schema:
+          type: object
+          properties:
+            tenant_id:
+              type: string
+            domain:
+              type: string
+            descripcion:
+              type: string
+            correo:
+              type: string
+
+      - name: RespuestaGenerica
+        contentType: application/json
+        schema:
           type: object
           properties:
             message:
               type: string
-              description: Mensaje informativo
             error:
               type: string
-              description: Mensaje de error, si aplica
+
+functions:
+  crearorg:
+    handler: Lambda_CrearOrganizacion.lambda_handler
+    events:
+      - http:
+          path: /org/crear
+          method: post
+          cors: true
+          documentation:
+            summary: Crear organización
+            description: Crear una nueva organización (tenant).
+            requestBody:
+              description: Datos de la organización a crear
+              required: true
+            requestModels:
+              'application/json': CrearOrganizacionRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Organización creada exitosamente
+                responseModels:
+                  'application/json': RespuestaGenerica
+
+  listarorg:
+    handler: Lambda_ListarOrg.lambda_handler
+    events:
+      - http:
+          path: /org/listar
+          method: get
+          cors: true
+          documentation:
+            summary: Listar organizaciones
+            description: Lista todas las organizaciones registradas.
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Lista de organizaciones
+                responseModels:
+                  'application/json': ListaOrganizacionesResponse
+
+  buscarorg:
+    handler: Lambda_BuscarOrg.lambda_handler
+    events:
+      - http:
+          path: /org/buscar
+          method: post
+          cors: true
+          documentation:
+            summary: Buscar organización
+            description: Busca una organización por su tenant_id.
+            requestBody:
+              description: Datos de búsqueda
+              required: true
+            requestModels:
+              'application/json': BuscarOrganizacionRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Organización encontrada
+                responseModels:
+                  'application/json': BuscarOrganizacionResponse
+
+  modificarorg:
+    handler: Lambda_ModiOrg.lambda_handler
+    events:
+      - http:
+          path: /org/modi
+          method: put
+          cors: true
+          documentation:
+            summary: Modificar organización
+            description: Modifica los datos de una organización existente.
+            requestBody:
+              description: Datos para modificar una organización
+              required: true
+            requestModels:
+              'application/json': ModificarOrganizacionRequest
+            methodResponses:
+              - statusCode: 200
+                responseBody:
+                  description: Organización modificada exitosamente
+                responseModels:
+                  'application/json': RespuestaGenerica
 
 resources:
   Resources:
