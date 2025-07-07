@@ -23,25 +23,6 @@ functions:
           path: /org/crear
           method: post
           cors: true
-          documentation:
-            summary: Crear nueva organización (tenant)
-            description: Registra una nueva organización educativa.
-            tags:
-              - Organización
-            requestBody:
-              description: Datos de la organización
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/CrearOrganizacionRequest'
-            responses:
-              200:
-                description: Organización creada exitosamente
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/RespuestaGenerica'
 
   listarorg:
     handler: Lambda_ListarOrg.lambda_handler
@@ -50,17 +31,6 @@ functions:
           path: /org/listar
           method: get
           cors: true
-          documentation:
-            summary: Listar organizaciones
-            description: Devuelve todas las organizaciones registradas.
-            tags: [Organización]
-            responses:
-              200:
-                description: Lista de organizaciones
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/ListaOrganizacionesResponse'
 
   buscarorg:
     handler: Lambda_BuscarOrg.lambda_handler
@@ -69,22 +39,6 @@ functions:
           path: /org/buscar
           method: post
           cors: true
-          documentation:
-            summary: Buscar organización
-            description: Busca una organización por su tenant_id.
-            tags: [Organización]
-            requestBody:
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/BuscarOrganizacionRequest'
-            responses:
-              200:
-                description: Organización encontrada
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/BuscarOrganizacionResponse'
 
   modificarorg:
     handler: Lambda_ModiOrg.lambda_handler
@@ -93,26 +47,6 @@ functions:
           path: /org/modi
           method: put
           cors: true
-          documentation:
-            summary: Modificar organización
-            description: Modifica campos de una organización. Requiere token con rol admin.
-            tags: [Organización]
-            requestHeaders:
-              - name: Authorization
-                required: true
-                description: Token JWT
-            requestBody:
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/ModificarOrganizacionRequest'
-            responses:
-              200:
-                description: Organización modificada
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/RespuestaGenerica'
 
 custom:
   autoswagger:
@@ -121,9 +55,10 @@ custom:
     apiType: http
     title: API Organización
     description: Endpoints de gestión de organizaciones (tenants)
-    basePath: /dev
+    basePath: /${sls:stage}
     swaggerPath: /swagger
     swaggerJsonPath: /swagger.json
+    useStage: true
     models:
       CrearOrganizacionRequest:
         type: object
@@ -190,4 +125,3 @@ resources:
           - AttributeName: tenant_id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-

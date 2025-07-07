@@ -30,31 +30,6 @@ functions:
           path: /compra/comprar
           method: post
           cors: true
-          documentation:
-            summary: Registrar compra de curso
-            description: |
-              Permite al alumno registrar la compra de un curso.
-              Se asegura de que el curso exista, el horario esté disponible, y que no exista una compra duplicada.
-              En caso de inscripción, elimina una reserva previa del mismo curso si existe.
-            tags: [Compras]
-            requestBody:
-              description: Datos requeridos para registrar la compra
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/ComprarCursoRequest'
-            responses:
-              200:
-                description: Compra registrada correctamente
-              400:
-                description: Faltan datos o estado inválido
-              403:
-                description: Token inválido o rol no autorizado
-              404:
-                description: Curso u horario no encontrado
-              409:
-                description: Ya existe una compra activa para este curso
 
   listarCompras:
     handler: Lambda_ListarCompras.handler
@@ -66,44 +41,6 @@ functions:
           path: /compra/listar
           method: get
           cors: true
-          documentation:
-            summary: Listar compras
-            description: |
-              Lista compras activas del usuario autenticado.
-              Si el usuario es `alumno`, lista sus compras según el estado.
-              Si es `instructor` o `admin`, lista todas las compras del curso.
-              Soporta paginación por `curso_id` o `alumno_dni`.
-            tags: [Compras]
-            requestHeaders:
-              - name: Authorization
-                required: true
-                description: Token JWT del usuario autenticado
-            queryParams:
-              - name: tenant_id
-                required: true
-                description: ID del tenant (obligatorio)
-              - name: curso_id
-                required: false
-                description: ID del curso (necesario para instructores/admins)
-              - name: estado
-                required: false
-                description: Estado de la compra: `reservado` o `inscrito`
-              - name: limit
-                required: false
-                description: Número máximo de resultados por página
-              - name: lastCursoId
-                required: false
-                description: Último `curso_id` para paginación (para alumnos)
-              - name: lastAlumnoDni
-                required: false
-                description: Último `alumno_dni` para paginación (para instructores)
-            responses:
-              200:
-                description: Lista de compras obtenida exitosamente
-              400:
-                description: Parámetros faltantes o inválidos
-              403:
-                description: Usuario no autorizado
 
   eliminarCompra:
     handler: Lambda_EliminarCompra.handler
@@ -115,26 +52,6 @@ functions:
           path: /compra/eliminar
           method: delete
           cors: true
-          documentation:
-            summary: Eliminar compra
-            description: |
-              Permite eliminar una compra si el estado es `reservado` o `inscrito`.
-              Solo los alumnos pueden ejecutar esta operación.
-            tags: [Compras]
-            requestBody:
-              description: Información para identificar la compra a eliminar
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/EliminarCompraRequest'
-            responses:
-              200:
-                description: Compra eliminada correctamente
-              403:
-                description: Usuario no autorizado para eliminar la compra
-              404:
-                description: Compra no encontrada
 
 custom:
   autoswagger:
@@ -205,5 +122,3 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-
-            

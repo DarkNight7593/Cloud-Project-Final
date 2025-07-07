@@ -20,137 +20,43 @@ provider:
 functions:
   crear:
     handler: Lambda_CrearUsuario.lambda_handler
-    description: Crear un nuevo usuario (admin, instructor o alumno) en un tenant existente.
     events:
       - http:
           path: /usuario/crear
           method: post
           cors: true
-          documentation:
-            summary: Crear usuario
-            description: |
-              Crea un nuevo usuario dentro del sistema.
-              Si el rol es "instructor", requiere validación del token de un admin.
-            tags: [Usuario]
-            requestBody:
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/CrearUsuarioRequest'
-            responses:
-              200:
-                description: Usuario creado exitosamente
-              400:
-                description: Datos incompletos o inválidos
-              403:
-                description: Token inválido o sin permiso
-              409:
-                description: Usuario ya existente
 
   login:
     handler: Lambda_LoginUsuario.lambda_handler
-    description: Inicia sesión y retorna un token válido si las credenciales son correctas.
     events:
       - http:
           path: /usuario/login
           method: post
           cors: true
-          documentation:
-            summary: Login de usuario
-            tags: [Usuario]
-            requestBody:
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/LoginRequest'
-            responses:
-              200:
-                description: Login exitoso
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/LoginResponse'
-              401:
-                description: Credenciales inválidas
 
   logout:
     handler: Lambda_Logout.lambda_handler
-    description: Invalida un token y cierra la sesión del usuario.
     events:
       - http:
           path: /usuario/logout
           method: post
           cors: true
-          documentation:
-            summary: Logout
-            tags: [Usuario]
-            requestBody:
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/LogoutRequest'
-            responses:
-              200:
-                description: Sesión cerrada exitosamente
-              400:
-                description: Token no válido
 
   validar:
     handler: Lambda_ValidarTokenAcceso.lambda_handler
-    description: Verifica si un token JWT es válido y no ha expirado.
     events:
       - http:
           path: /usuario/validar
           method: post
           cors: true
-          documentation:
-            summary: Validar token
-            tags: [Usuario]
-            requestBody:
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/ValidarTokenRequest'
-            responses:
-              200:
-                description: Token válido
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/ValidarTokenResponse'
-              401:
-                description: Token inválido o expirado
 
   listar:
     handler: Lambda_ListarUsuario.lambda_handler
-    description: Lista usuarios por rol (solo accesible por administradores).
     events:
       - http:
           path: /usuario/listar
           method: post
           cors: true
-          documentation:
-            summary: Listar usuarios
-            tags: [Usuario]
-            requestBody:
-              required: true
-              content:
-                application/json:
-                  schema:
-                    $ref: '#/components/schemas/ListarUsuarioRequest'
-            responses:
-              200:
-                description: Lista de usuarios
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/ListarUsuarioResponse'
-              403:
-                description: Permiso denegado
 
 custom:
   autoswagger:
@@ -272,4 +178,3 @@ resources:
           - AttributeName: token
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
-

@@ -17,10 +17,8 @@ provider:
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
 
 functions:
-
   crearHorario:
     handler: Lambda_CrearHorario.handler
-    description: Crea un nuevo horario para un curso, validando conflictos.
     events:
       - http:
           path: /horario/crear
@@ -29,7 +27,6 @@ functions:
 
   listarHorario:
     handler: Lambda_ListarHorario.handler
-    description: Lista todos los horarios de un curso con paginación.
     events:
       - http:
           path: /horario/listar
@@ -38,7 +35,6 @@ functions:
 
   obtenerHorario:
     handler: Lambda_BuscarHorario.handler
-    description: Obtiene los detalles de un horario por ID.
     events:
       - http:
           path: /horario/buscar
@@ -47,7 +43,6 @@ functions:
 
   actualizarHorario:
     handler: Lambda_ModiHorario.handler
-    description: Actualiza los datos de un horario existente.
     events:
       - http:
           path: /horario/modificar
@@ -56,7 +51,6 @@ functions:
 
   eliminarHorario:
     handler: Lambda_EliminarHorario.handler
-    description: Elimina un horario específico.
     events:
       - http:
           path: /horario/eliminar
@@ -103,7 +97,6 @@ custom:
     swaggerPath: /swagger
     swaggerJsonPath: /swagger.json
     models:
-
       CrearHorarioRequest:
         type: object
         required: [tenant_id, curso_id, dias, inicio_hora, fin_hora]
@@ -159,4 +152,3 @@ custom:
             properties:
               total: { type: integer }
               lastHorarioId: { type: string }
-

@@ -19,10 +19,8 @@ provider:
     FUNCION_ELIMINAR_HORARIO: api-horario-${sls:stage}-eliminarHorario
 
 functions:
-
   crearCurso:
     handler: Lambda_CrearCurso.handler
-    description: Crea un nuevo curso dentro del tenant. Requiere autenticación de instructor.
     events:
       - http:
           path: /curso/crear
@@ -31,7 +29,6 @@ functions:
 
   listarCursos:
     handler: Lambda_ListarCursos.handler
-    description: Lista todos los cursos del tenant. Soporta filtro por instructor.
     events:
       - http:
           path: /curso/listar
@@ -40,7 +37,6 @@ functions:
 
   obtenerCurso:
     handler: Lambda_BuscarCurso.handler
-    description: Obtiene un curso por ID.
     events:
       - http:
           path: /curso/buscar
@@ -49,7 +45,6 @@ functions:
 
   actualizarCurso:
     handler: Lambda_ModiCurso.handler
-    description: Modifica campos de un curso existente.
     events:
       - http:
           path: /curso/modificar
@@ -58,7 +53,6 @@ functions:
 
   eliminarCurso:
     handler: Lambda_EliminarCurso.handler
-    description: Elimina un curso y todos sus horarios asociados.
     events:
       - http:
           path: /curso/eliminar
@@ -178,4 +172,3 @@ custom:
           message: { type: string }
           curso_id: { type: string }
           total_horarios: { type: integer }
-
