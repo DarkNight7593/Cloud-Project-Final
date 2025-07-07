@@ -17,11 +17,55 @@ provider:
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
     FUNCION_ORG: api-org-${sls:stage}-buscarorg
 
+functions:
+  crear:
+    handler: Lambda_CrearUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/crear
+          method: post
+          cors: true
+
+  login:
+    handler: Lambda_LoginUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/login
+          method: post
+          cors: true
+
+  logout:
+    handler: Lambda_Logout.lambda_handler
+    events:
+      - http:
+          path: /usuario/logout
+          method: post
+          cors: true
+
+  validar:
+    handler: Lambda_ValidarTokenAcceso.lambda_handler
+    events:
+      - http:
+          path: /usuario/validar
+          method: post
+          cors: true
+
+  listar:
+    handler: Lambda_ListarUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/listar
+          method: post
+          cors: true
+
 custom:
   documentation:
-    version: 1.0.0
+    openapiVersion: 3.0.3
     title: API de Usuarios
+    version: 1.0.0
     description: Endpoints para autenticación y gestión de usuarios
+    output: openapi.json
+
     models:
       - name: CrearUsuarioRequest
         contentType: application/json
@@ -114,108 +158,92 @@ custom:
                   rol: { type: string }
             last_dni: { type: string }
 
-functions:
-  crear:
-    handler: Lambda_CrearUsuario.lambda_handler
-    events:
-      - http:
-          path: /usuario/crear
-          method: post
-          cors: true
-          documentation:
-            summary: Crear usuario
-            description: Registra un nuevo usuario (admin o instructor)
-            requestBody:
-              description: Datos del nuevo usuario
-              required: true
-            requestModels:
-              'application/json': CrearUsuarioRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Usuario creado correctamente
+    paths:
+      /usuario/crear:
+        post:
+          summary: Crear usuario
+          description: Registra un nuevo usuario (admin o instructor)
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CrearUsuarioRequest'
+          responses:
+            200:
+              description: Usuario creado correctamente
 
-  login:
-    handler: Lambda_LoginUsuario.lambda_handler
-    events:
-      - http:
-          path: /usuario/login
-          method: post
-          cors: true
-          documentation:
-            summary: Login de usuario
-            description: Inicia sesión con credenciales válidas
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': LoginRequest
-            methodResponses:
-              - statusCode: 200
-                responseModels:
-                  'application/json': LoginResponse
-              - statusCode: 401
-                responseBody:
-                  description: Credenciales inválidas
+      /usuario/login:
+        post:
+          summary: Login de usuario
+          description: Inicia sesión con credenciales válidas
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/LoginRequest'
+          responses:
+            200:
+              description: Login exitoso
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/LoginResponse'
+            401:
+              description: Credenciales inválidas
 
-  logout:
-    handler: Lambda_Logout.lambda_handler
-    events:
-      - http:
-          path: /usuario/logout
-          method: post
-          cors: true
-          documentation:
-            summary: Logout usuario
-            description: Cierra sesión y revoca el token
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': LogoutRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Sesión cerrada correctamente
+      /usuario/logout:
+        post:
+          summary: Logout usuario
+          description: Cierra sesión y revoca el token
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/LogoutRequest'
+          responses:
+            200:
+              description: Sesión cerrada correctamente
 
-  validar:
-    handler: Lambda_ValidarTokenAcceso.lambda_handler
-    events:
-      - http:
-          path: /usuario/validar
-          method: post
-          cors: true
-          documentation:
-            summary: Validar token
-            description: Valida el token de acceso JWT
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': ValidarTokenRequest
-            methodResponses:
-              - statusCode: 200
-                responseModels:
-                  'application/json': ValidarTokenResponse
-              - statusCode: 403
-                responseBody:
-                  description: Token inválido
+      /usuario/validar:
+        post:
+          summary: Validar token
+          description: Valida el token de acceso JWT
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ValidarTokenRequest'
+          responses:
+            200:
+              description: Token válido
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ValidarTokenResponse'
+            403:
+              description: Token inválido
 
-  listar:
-    handler: Lambda_ListarUsuario.lambda_handler
-    events:
-      - http:
-          path: /usuario/listar
-          method: post
-          cors: true
-          documentation:
-            summary: Listar usuarios
-            description: Lista usuarios por rol (alumno o instructor)
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': ListarUsuarioRequest
-            methodResponses:
-              - statusCode: 200
-                responseModels:
-                  'application/json': ListarUsuarioResponse
+      /usuario/listar:
+        post:
+          summary: Listar usuarios
+          description: Lista usuarios por rol (alumno o instructor)
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ListarUsuarioRequest'
+          responses:
+            200:
+              description: Lista de usuarios
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ListarUsuarioResponse'
 
 resources:
   Resources:
@@ -250,3 +278,4 @@ resources:
           - AttributeName: token
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+
