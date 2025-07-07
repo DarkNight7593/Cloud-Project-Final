@@ -2,7 +2,7 @@ org: juanrodo
 service: api-org
 
 plugins:
-  - serverless-aws-documentation
+  - serverless-auto-swagger
 
 provider:
   name: aws
@@ -25,14 +25,23 @@ functions:
           cors: true
           documentation:
             summary: Crear nueva organización (tenant)
-            description: |
-              Registra una nueva organización con un `tenant_id` único.
-              Requiere los campos: domain, descripción y correo.
-            tags: [Organización]
-            requestModels:
-              "application/json": CrearOrganizacionRequest
-            responseModels:
-              "application/json": RespuestaGenerica
+            description: Registra una nueva organización educativa.
+            tags:
+              - Organización
+            requestBody:
+              description: Datos de la organización
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/CrearOrganizacionRequest'
+            responses:
+              200:
+                description: Organización creada exitosamente
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/RespuestaGenerica'
 
   listarorg:
     handler: Lambda_ListarOrg.lambda_handler
@@ -43,10 +52,15 @@ functions:
           cors: true
           documentation:
             summary: Listar organizaciones
-            description: Retorna todas las organizaciones registradas.
+            description: Devuelve todas las organizaciones registradas.
             tags: [Organización]
-            responseModels:
-              "application/json": ListaOrganizacionesResponse
+            responses:
+              200:
+                description: Lista de organizaciones
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/ListaOrganizacionesResponse'
 
   buscarorg:
     handler: Lambda_BuscarOrg.lambda_handler
@@ -56,13 +70,21 @@ functions:
           method: post
           cors: true
           documentation:
-            summary: Buscar organización por tenant_id
-            description: Devuelve los datos de una organización existente por su tenant_id.
+            summary: Buscar organización
+            description: Busca una organización por su tenant_id.
             tags: [Organización]
-            requestModels:
-              "application/json": BuscarOrganizacionRequest
-            responseModels:
-              "application/json": BuscarOrganizacionResponse
+            requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/BuscarOrganizacionRequest'
+            responses:
+              200:
+                description: Organización encontrada
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/BuscarOrganizacionResponse'
 
   modificarorg:
     handler: Lambda_ModiOrg.lambda_handler
@@ -72,78 +94,89 @@ functions:
           method: put
           cors: true
           documentation:
-            summary: Modificar datos de una organización
-            description: |
-              Permite modificar los campos `domain`, `descripcion` o `correo` de una organización.
-              Requiere ser rol `admin` validado con un token.
+            summary: Modificar organización
+            description: Modifica campos de una organización. Requiere token con rol admin.
             tags: [Organización]
-            requestModels:
-              "application/json": ModificarOrganizacionRequest
-            responseModels:
-              "application/json": RespuestaGenerica
+            requestHeaders:
+              - name: Authorization
+                required: true
+                description: Token JWT
+            requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ModificarOrganizacionRequest'
+            responses:
+              200:
+                description: Organización modificada
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/RespuestaGenerica'
 
 custom:
-  documentation:
+  autoswagger:
+    type: httpApi
+    generateSwaggerOnDeploy: true
     apiType: http
+    title: API Organización
+    description: Endpoints de gestión de organizaciones (tenants)
+    basePath: /dev
+    swaggerPath: /swagger
+    swaggerJsonPath: /swagger.json
     models:
-      - name: CrearOrganizacionRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, domain, descripcion, correo]
-          properties:
-            tenant_id: { type: string }
-            domain: { type: string }
-            descripcion: { type: string }
-            correo: { type: string }
-      - name: ModificarOrganizacionRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id]
-          properties:
-            tenant_id: { type: string }
-            domain: { type: string }
-            descripcion: { type: string }
-            correo: { type: string }
-      - name: BuscarOrganizacionRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id]
-          properties:
-            tenant_id: { type: string }
-      - name: BuscarOrganizacionResponse
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            tenant_id: { type: string }
-            domain: { type: string }
-            descripcion: { type: string }
-            correo: { type: string }
-      - name: ListaOrganizacionesResponse
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            organizaciones:
-              type: array
-              items:
-                type: object
-                properties:
-                  tenant_id: { type: string }
-                  domain: { type: string }
-                  descripcion: { type: string }
-                  correo: { type: string }
-            total: { type: integer }
-      - name: RespuestaGenerica
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            message: { type: string }
-            error: { type: string }
+      CrearOrganizacionRequest:
+        type: object
+        required: [tenant_id, domain, descripcion, correo]
+        properties:
+          tenant_id: { type: string }
+          domain: { type: string }
+          descripcion: { type: string }
+          correo: { type: string }
+
+      ModificarOrganizacionRequest:
+        type: object
+        required: [tenant_id]
+        properties:
+          tenant_id: { type: string }
+          domain: { type: string }
+          descripcion: { type: string }
+          correo: { type: string }
+
+      BuscarOrganizacionRequest:
+        type: object
+        required: [tenant_id]
+        properties:
+          tenant_id: { type: string }
+
+      BuscarOrganizacionResponse:
+        type: object
+        properties:
+          tenant_id: { type: string }
+          domain: { type: string }
+          descripcion: { type: string }
+          correo: { type: string }
+
+      ListaOrganizacionesResponse:
+        type: object
+        properties:
+          organizaciones:
+            type: array
+            items:
+              type: object
+              properties:
+                tenant_id: { type: string }
+                domain: { type: string }
+                descripcion: { type: string }
+                correo: { type: string }
+          total: { type: integer }
+
+      RespuestaGenerica:
+        type: object
+        properties:
+          message: { type: string }
+          error: { type: string }
+
 resources:
   Resources:
     TablaOrg:
@@ -157,3 +190,4 @@ resources:
           - AttributeName: tenant_id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+

@@ -2,7 +2,7 @@ org: juanrodo
 service: api-compras
 
 plugins:
-  - serverless-aws-documentation
+  - serverless-auto-swagger
 
 provider:
   name: aws
@@ -22,36 +22,45 @@ provider:
 functions:
   comprarCurso:
     handler: Lambda_Comprar.handler
+    description: >
+      Registra una compra para un curso por parte de un alumno autenticado.
+      Valida el token JWT, verifica que el curso y horario existan, y que no haya una compra previa del mismo curso.
     events:
       - http:
           path: /compra/comprar
           method: post
           cors: true
           documentation:
-            summary: Registrar una compra
+            summary: Registrar compra de curso
             description: |
-              Permite a un alumno registrar la compra de un curso. Valida que exista el curso, el horario, y que no haya una compra previa del mismo curso.
-            requestModels:
-              "application/json": ComprarCursoRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Compra registrada exitosamente
-              - statusCode: 400
-                responseBody:
-                  description: Parámetros faltantes o estado inválido
-              - statusCode: 403
-                responseBody:
-                  description: Usuario no autorizado
-              - statusCode: 404
-                responseBody:
-                  description: Curso u horario no encontrado
-              - statusCode: 409
-                responseBody:
-                  description: Compra duplicada
+              Permite al alumno registrar la compra de un curso.
+              Se asegura de que el curso exista, el horario esté disponible, y que no exista una compra duplicada.
+              En caso de inscripción, elimina una reserva previa del mismo curso si existe.
+            tags: [Compras]
+            requestBody:
+              description: Datos requeridos para registrar la compra
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ComprarCursoRequest'
+            responses:
+              200:
+                description: Compra registrada correctamente
+              400:
+                description: Faltan datos o estado inválido
+              403:
+                description: Token inválido o rol no autorizado
+              404:
+                description: Curso u horario no encontrado
+              409:
+                description: Ya existe una compra activa para este curso
 
   listarCompras:
     handler: Lambda_ListarCompras.handler
+    description: >
+      Lista las compras realizadas por un alumno autenticado, o por curso si es instructor o administrador.
+      Permite paginar resultados y filtrar por estado.
     events:
       - http:
           path: /compra/listar
@@ -60,40 +69,47 @@ functions:
           documentation:
             summary: Listar compras
             description: |
-              Lista las compras del alumno autenticado o del curso si el usuario es instructor/admin. Soporta paginación por curso_id o alumno_dni.
-            requestParameters:
-              querystrings:
-                tenant_id:
-                  required: true
-                  description: ID del tenant
-                curso_id:
-                  required: false
-                  description: ID del curso (requerido para instructores/admins)
-                estado:
-                  required: false
-                  description: Estado de la compra (reservado, inscrito)
-                limit:
-                  required: false
-                  description: Límite de resultados
-                lastCursoId:
-                  required: false
-                  description: Último curso_id para paginación
-                lastAlumnoDni:
-                  required: false
-                  description: Último alumno_dni para paginación
-              headers:
-                Authorization:
-                  required: true
-                  description: Token JWT
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Lista de compras
-              - statusCode: 400
-              - statusCode: 403
+              Lista compras activas del usuario autenticado.
+              Si el usuario es `alumno`, lista sus compras según el estado.
+              Si es `instructor` o `admin`, lista todas las compras del curso.
+              Soporta paginación por `curso_id` o `alumno_dni`.
+            tags: [Compras]
+            requestHeaders:
+              - name: Authorization
+                required: true
+                description: Token JWT del usuario autenticado
+            queryParams:
+              - name: tenant_id
+                required: true
+                description: ID del tenant (obligatorio)
+              - name: curso_id
+                required: false
+                description: ID del curso (necesario para instructores/admins)
+              - name: estado
+                required: false
+                description: Estado de la compra: `reservado` o `inscrito`
+              - name: limit
+                required: false
+                description: Número máximo de resultados por página
+              - name: lastCursoId
+                required: false
+                description: Último `curso_id` para paginación (para alumnos)
+              - name: lastAlumnoDni
+                required: false
+                description: Último `alumno_dni` para paginación (para instructores)
+            responses:
+              200:
+                description: Lista de compras obtenida exitosamente
+              400:
+                description: Parámetros faltantes o inválidos
+              403:
+                description: Usuario no autorizado
 
   eliminarCompra:
     handler: Lambda_EliminarCompra.handler
+    description: >
+      Elimina una compra (estado `reservado` o `inscrito`) hecha por un alumno.
+      Requiere validación del token y que el alumno sea el dueño de la compra.
     events:
       - http:
           path: /compra/eliminar
@@ -102,45 +118,62 @@ functions:
           documentation:
             summary: Eliminar compra
             description: |
-              Permite al alumno eliminar su compra existente en estado reservado o inscrito.
-            requestModels:
-              "application/json": EliminarCompraRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Compra eliminada exitosamente
-              - statusCode: 403
-                responseBody:
-                  description: Usuario no autorizado
-              - statusCode: 404
-                responseBody:
-                  description: Compra no encontrada
+              Permite eliminar una compra si el estado es `reservado` o `inscrito`.
+              Solo los alumnos pueden ejecutar esta operación.
+            tags: [Compras]
+            requestBody:
+              description: Información para identificar la compra a eliminar
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/EliminarCompraRequest'
+            responses:
+              200:
+                description: Compra eliminada correctamente
+              403:
+                description: Usuario no autorizado para eliminar la compra
+              404:
+                description: Compra no encontrada
 
 custom:
-  documentation:
-    apiType: http
+  autoswagger:
+    type: httpApi
+    generateSwaggerOnDeploy: true
+    title: API de Compras
+    description: API para registrar, listar y eliminar compras de cursos por alumnos.
+    basePath: /${sls:stage}
+    swaggerPath: /swagger
+    swaggerJsonPath: /swagger.json
+    useStage: true
     models:
-      - name: ComprarCursoRequest
-        contentType: application/json
-        schema:
-          type: object
-          required: [tenant_id, curso_id, horario_id, estado]
-          properties:
-            tenant_id: { type: string }
-            curso_id: { type: string }
-            horario_id: { type: string }
-            estado:
-              type: string
-              enum: [reservado, inscrito]
-
-      - name: EliminarCompraRequest
-        contentType: application/json
-        schema:
-          type: object
-          required: [tenant_id, curso_id]
-          properties:
-            tenant_id: { type: string }
-            curso_id: { type: string }
+      ComprarCursoRequest:
+        type: object
+        required: [tenant_id, curso_id, horario_id, estado]
+        properties:
+          tenant_id:
+            type: string
+            description: ID único del tenant (organización)
+          curso_id:
+            type: string
+            description: ID del curso que se desea comprar
+          horario_id:
+            type: string
+            description: ID del horario seleccionado
+          estado:
+            type: string
+            enum: [reservado, inscrito]
+            description: Estado inicial de la compra (`reservado` o `inscrito`)
+      EliminarCompraRequest:
+        type: object
+        required: [tenant_id, curso_id]
+        properties:
+          tenant_id:
+            type: string
+            description: ID del tenant (organización)
+          curso_id:
+            type: string
+            description: ID del curso cuya compra se desea eliminar
 
 resources:
   Resources:
@@ -172,4 +205,5 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
             

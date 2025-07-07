@@ -2,7 +2,7 @@ org: juanrodo
 service: api-usuario
 
 plugins:
-  - serverless-aws-documentation
+  - serverless-auto-swagger
 
 provider:
   name: aws
@@ -20,196 +20,224 @@ provider:
 functions:
   crear:
     handler: Lambda_CrearUsuario.lambda_handler
+    description: Crear un nuevo usuario (admin, instructor o alumno) en un tenant existente.
     events:
       - http:
           path: /usuario/crear
           method: post
           cors: true
           documentation:
-            summary: Crear un nuevo usuario
+            summary: Crear usuario
             description: |
-              Crea un nuevo usuario (admin o instructor) dentro de un tenant existente.
-              Si el rol es "instructor", se requiere un token válido de un administrador.
+              Crea un nuevo usuario dentro del sistema.
+              Si el rol es "instructor", requiere validación del token de un admin.
             tags: [Usuario]
-            requestModels:
-              "application/json": CrearUsuarioRequest
-            responseModels:
-              "application/json": RespuestaGenerica
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/CrearUsuarioRequest'
+            responses:
+              200:
+                description: Usuario creado exitosamente
+              400:
+                description: Datos incompletos o inválidos
+              403:
+                description: Token inválido o sin permiso
+              409:
+                description: Usuario ya existente
 
   login:
     handler: Lambda_LoginUsuario.lambda_handler
+    description: Inicia sesión y retorna un token válido si las credenciales son correctas.
     events:
       - http:
           path: /usuario/login
           method: post
           cors: true
           documentation:
-            summary: Iniciar sesión de usuario
-            description: |
-              Permite que un usuario existente inicie sesión.
-              Retorna un token único válido por 1 hora si las credenciales son correctas.
+            summary: Login de usuario
             tags: [Usuario]
-            requestModels:
-              "application/json": LoginRequest
-            responseModels:
-              "application/json": LoginResponse
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/LoginRequest'
+            responses:
+              200:
+                description: Login exitoso
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/LoginResponse'
+              401:
+                description: Credenciales inválidas
 
   logout:
     handler: Lambda_Logout.lambda_handler
+    description: Invalida un token y cierra la sesión del usuario.
     events:
       - http:
           path: /usuario/logout
           method: post
           cors: true
           documentation:
-            summary: Cerrar sesión de usuario
-            description: |
-              Invalida el token de acceso de un usuario cerrando su sesión.
-              El token debe estar en el body.
+            summary: Logout
             tags: [Usuario]
-            requestModels:
-              "application/json": LogoutRequest
-            responseModels:
-              "application/json": RespuestaGenerica
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/LogoutRequest'
+            responses:
+              200:
+                description: Sesión cerrada exitosamente
+              400:
+                description: Token no válido
 
   validar:
     handler: Lambda_ValidarTokenAcceso.lambda_handler
+    description: Verifica si un token JWT es válido y no ha expirado.
     events:
       - http:
           path: /usuario/validar
           method: post
           cors: true
           documentation:
-            summary: Validar token de acceso
-            description: |
-              Verifica si un token de acceso es válido y aún no ha expirado.
-              Devuelve datos del usuario si es válido.
+            summary: Validar token
             tags: [Usuario]
-            requestModels:
-              "application/json": ValidarTokenRequest
-            responseModels:
-              "application/json": ValidarTokenResponse
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ValidarTokenRequest'
+            responses:
+              200:
+                description: Token válido
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/ValidarTokenResponse'
+              401:
+                description: Token inválido o expirado
 
   listar:
     handler: Lambda_ListarUsuario.lambda_handler
+    description: Lista usuarios por rol (solo accesible por administradores).
     events:
       - http:
           path: /usuario/listar
           method: post
           cors: true
           documentation:
-            summary: Listar usuarios por rol
-            description: |
-              Devuelve una lista de usuarios de un rol específico (instructor o alumno) dentro de un tenant.
-              Solo un admin puede invocar esta función.
+            summary: Listar usuarios
             tags: [Usuario]
-            requestModels:
-              "application/json": ListarUsuarioRequest
-            responseModels:
-              "application/json": ListarUsuarioResponse
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ListarUsuarioRequest'
+            responses:
+              200:
+                description: Lista de usuarios
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/ListarUsuarioResponse'
+              403:
+                description: Permiso denegado
 
 custom:
-  documentation:
-    apiType: http
+  autoswagger:
+    type: httpApi
+    generateSwaggerOnDeploy: true
+    title: API de Usuarios
+    description: Endpoints para autenticación y gestión de usuarios.
+    basePath: /${sls:stage}
+    swaggerPath: /swagger
+    swaggerJsonPath: /swagger.json
+    useStage: true
     models:
-      - name: CrearUsuarioRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, dni, full_name, password, rol]
-          properties:
-            tenant_id: { type: string }
-            dni: { type: string }
-            full_name: { type: string }
-            password: { type: string }
-            rol:
-              type: string
-              enum: [admin, instructor]
+      CrearUsuarioRequest:
+        type: object
+        required: [tenant_id, dni, full_name, password, rol]
+        properties:
+          tenant_id: { type: string, description: ID del tenant }
+          dni: { type: string, description: DNI del usuario }
+          full_name: { type: string, description: Nombre completo }
+          password: { type: string, description: Contraseña en texto plano }
+          rol:
+            type: string
+            enum: [admin, instructor]
+            description: Rol del usuario
 
-      - name: LoginRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, dni, password, rol]
-          properties:
-            tenant_id: { type: string }
-            dni: { type: string }
-            password: { type: string }
-            rol: { type: string }
+      LoginRequest:
+        type: object
+        required: [tenant_id, dni, password, rol]
+        properties:
+          tenant_id: { type: string }
+          dni: { type: string }
+          password: { type: string }
+          rol: { type: string }
 
-      - name: LoginResponse
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            message: { type: string }
-            token: { type: string }
-            expires_at: { type: string }
+      LoginResponse:
+        type: object
+        properties:
+          message: { type: string }
+          token: { type: string }
+          expires_at: { type: string }
 
-      - name: LogoutRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, token]
-          properties:
-            tenant_id: { type: string }
-            token: { type: string }
+      LogoutRequest:
+        type: object
+        required: [tenant_id, token]
+        properties:
+          tenant_id: { type: string }
+          token: { type: string }
 
-      - name: ValidarTokenRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, token]
-          properties:
-            tenant_id: { type: string }
-            token: { type: string }
+      ValidarTokenRequest:
+        type: object
+        required: [tenant_id, token]
+        properties:
+          tenant_id: { type: string }
+          token: { type: string }
 
-      - name: ValidarTokenResponse
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            message: { type: string }
-            dni: { type: string }
-            full_name: { type: string }
-            rol: { type: string }
-            expires_at: { type: string }
+      ValidarTokenResponse:
+        type: object
+        properties:
+          message: { type: string }
+          dni: { type: string }
+          full_name: { type: string }
+          rol: { type: string }
+          expires_at: { type: string }
 
-      - name: ListarUsuarioRequest
-        contentType: "application/json"
-        schema:
-          type: object
-          required: [tenant_id, rol]
-          properties:
-            tenant_id: { type: string }
-            rol:
-              type: string
-              enum: [instructor, alumno]
-            last_dni: { type: string }
-            limit: { type: integer }
+      ListarUsuarioRequest:
+        type: object
+        required: [tenant_id, rol]
+        properties:
+          tenant_id: { type: string }
+          rol:
+            type: string
+            enum: [instructor, alumno]
+          last_dni: { type: string }
+          limit: { type: integer }
 
-      - name: ListarUsuarioResponse
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            usuarios:
-              type: array
-              items:
-                type: object
-                properties:
-                  dni: { type: string }
-                  full_name: { type: string }
-                  rol: { type: string }
-            last_dni: { type: string }
-
-      - name: RespuestaGenerica
-        contentType: "application/json"
-        schema:
-          type: object
-          properties:
-            message: { type: string }
-            error: { type: string }
+      ListarUsuarioResponse:
+        type: object
+        properties:
+          usuarios:
+            type: array
+            items:
+              type: object
+              properties:
+                dni: { type: string }
+                full_name: { type: string }
+                rol: { type: string }
+          last_dni: { type: string }
 
 resources:
   Resources:
@@ -244,3 +272,4 @@ resources:
           - AttributeName: token
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+

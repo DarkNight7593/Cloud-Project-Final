@@ -12,9 +12,8 @@ cd Api-Usuario
     if [ ! -f "package.json" ]; then
         npm init -y
     fi
-npm install serverless-aws-documentation
+npm install serverless-auto-swagger
 sls deploy 
-sls documentation generate
 
 cd ..
 
@@ -24,9 +23,8 @@ cd Api-Org
     if [ ! -f "package.json" ]; then
         npm init -y
     fi
-npm install serverless-aws-documentation
+npm install serverless-auto-swagger
 sls deploy 
-sls documentation generate
 
 cd ..
 
@@ -43,11 +41,10 @@ deploy_node_service() {
 
     # Asegurarse que aws-sdk esté instalado
     npm install aws-sdk
-    npm install serverless-aws-documentation
+    npm install serverless-auto-swagger
 
     # Desplegar
     sls deploy 
-    sls documentation generate
 
 
     cd ..
