@@ -52,8 +52,7 @@ functions:
 package:
   individually: false
   include:
-    - '**/*.js'
-    - doc/**
+    - '**'
 
 resources:
   Resources:

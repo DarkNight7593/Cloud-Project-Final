@@ -100,5 +100,5 @@ resources:
 package:
   individually: false
   include:
-    - doc/**
-    - '**/*.js'
+    - '**'
+

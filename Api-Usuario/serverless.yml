@@ -54,6 +54,11 @@ functions:
           path: /usuario/listar
           method: post
           cors: true
+          
+package:
+  individually: false
+  include:
+    - '**'
 
 resources:
   Resources:
