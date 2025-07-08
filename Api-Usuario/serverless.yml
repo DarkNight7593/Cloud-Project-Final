@@ -55,6 +55,18 @@ functions:
           method: post
           cors: true
           
+  doc:
+    handler: Lambda_Doc.handler
+    events:
+      - http:
+          path: /doc
+          method: get
+          cors: true
+      - http:
+          path: /doc/{proxy+}
+          method: get
+          cors: true
+
 package:
   individually: false
   include:
