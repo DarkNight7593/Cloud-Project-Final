@@ -8,13 +8,25 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
+        # Obtener la ruta solicitada
         req_path = event.get('rawPath', '/doc')
         base_path = os.path.join(os.path.dirname(__file__), 'doc')
 
-        # Normaliza el path
+        # Normalizar la ruta solicitada (evita ../ path traversal)
         relative_path = req_path.replace('/doc', '', 1) or '/index.html'
-        file_path = os.path.join(base_path, relative_path.lstrip('/'))
+        relative_path = os.path.normpath(relative_path).lstrip(os.sep)
+        file_path = os.path.join(base_path, relative_path)
 
+        # Evita acceso fuera del directorio doc
+        if not file_path.startswith(base_path):
+            logger.warning(f"Intento de acceso no permitido: {file_path}")
+            return {
+                'statusCode': 403,
+                'headers': cors_headers(),
+                'body': 'Acceso denegado'
+            }
+
+        # Si es un directorio, servir index.html
         if os.path.isdir(file_path):
             file_path = os.path.join(file_path, 'index.html')
 
@@ -22,23 +34,41 @@ def lambda_handler(event, context):
         content_type, _ = mimetypes.guess_type(file_path)
         content_type = content_type or 'application/octet-stream'
 
-        # Leer archivo como binario por si es HTML/CSS/JS
+        # Leer archivo como binario
         with open(file_path, 'rb') as f:
             content = f.read()
 
-        # Codificar en base64 si es binario (ej. imágenes)
-        is_binary = not content_type.startswith('text') and content_type != 'application/json'
+        # Determinar si se debe codificar en base64
+        is_binary = not content_type.startswith('text') and content_type not in ['application/json', 'application/javascript']
 
-        return {
+        response = {
             'statusCode': 200,
-            'headers': { 'Content-Type': content_type },
+            'headers': {**cors_headers(), 'Content-Type': content_type},
             'body': base64.b64encode(content).decode('utf-8') if is_binary else content.decode('utf-8'),
             'isBase64Encoded': is_binary
         }
 
-    except Exception as e:
-        logger.error(f'Archivo no encontrado: {e}')
+        logger.info(f'Archivo servido: {file_path} (binary={is_binary})')
+        return response
+
+    except FileNotFoundError:
+        logger.warning(f'Archivo no encontrado: {req_path}')
         return {
             'statusCode': 404,
-            'body': 'Archivo no encontrado'
+            'headers': cors_headers(),
+            'body': f'Archivo no encontrado: {req_path}'
         }
+
+    except Exception as e:
+        logger.error(f'Error inesperado: {e}')
+        return {
+            'statusCode': 500,
+            'headers': cors_headers(),
+            'body': f'Error del servidor: {str(e)}'
+        }
+
+def cors_headers():
+    return {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*'
+    }
