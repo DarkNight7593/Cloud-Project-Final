@@ -1,0 +1,234 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API de Usuarios",
+    "version": "1.0.0",
+    "description": "Endpoints para autenticación y gestión de usuarios"
+  },
+  "paths": {
+    "/usuario/crear": {
+      "post": {
+        "summary": "Crear usuario",
+        "description": "Registra un nuevo usuario (admin o instructor)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUsuarioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario creado correctamente"
+          }
+        }
+      }
+    },
+    "/usuario/login": {
+      "post": {
+        "summary": "Login de usuario",
+        "description": "Inicia sesión con credenciales válidas",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales inválidas"
+          }
+        }
+      }
+    },
+    "/usuario/logout": {
+      "post": {
+        "summary": "Logout usuario",
+        "description": "Cierra sesión y revoca el token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión cerrada correctamente"
+          }
+        }
+      }
+    },
+    "/usuario/validar": {
+      "post": {
+        "summary": "Validar token",
+        "description": "Valida el token de acceso JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidarTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidarTokenResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token inválido"
+          }
+        }
+      }
+    },
+    "/usuario/listar": {
+      "post": {
+        "summary": "Listar usuarios",
+        "description": "Lista usuarios por rol (alumno o instructor)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListarUsuarioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListarUsuarioResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CrearUsuarioRequest": {
+        "type": "object",
+        "required": ["tenant_id", "dni", "full_name", "password", "rol"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "dni": { "type": "string" },
+          "full_name": { "type": "string" },
+          "password": { "type": "string" },
+          "rol": {
+            "type": "string",
+            "enum": ["admin", "instructor"]
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["tenant_id", "dni", "password", "rol"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "dni": { "type": "string" },
+          "password": { "type": "string" },
+          "rol": { "type": "string" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "token": { "type": "string" },
+          "expires_at": { "type": "string" }
+        }
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "required": ["tenant_id", "token"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "token": { "type": "string" }
+        }
+      },
+      "ValidarTokenRequest": {
+        "type": "object",
+        "required": ["tenant_id", "token"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "token": { "type": "string" }
+        }
+      },
+      "ValidarTokenResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "dni": { "type": "string" },
+          "full_name": { "type": "string" },
+          "rol": { "type": "string" },
+          "expires_at": { "type": "string" }
+        }
+      },
+      "ListarUsuarioRequest": {
+        "type": "object",
+        "required": ["tenant_id", "rol"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "rol": {
+            "type": "string",
+            "enum": ["instructor", "alumno"]
+          },
+          "last_dni": { "type": "string" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "ListarUsuarioResponse": {
+        "type": "object",
+        "properties": {
+          "usuarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dni": { "type": "string" },
+                "full_name": { "type": "string" },
+                "rol": { "type": "string" }
+              }
+            }
+          },
+          "last_dni": { "type": "string" }
+        }
+      }
+    }
+  }
+}

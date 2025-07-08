@@ -1,9 +1,6 @@
 org: juanrodo
 service: api-compras
 
-plugins:
-  - serverless-openapi-documentation
-
 provider:
   name: aws
   runtime: nodejs22.x
@@ -17,48 +14,6 @@ provider:
     FUNCION_BUSCAR_CURSO: api-curso-${sls:stage}-obtenerCurso
     FUNCION_BUSCAR_HORARIO: api-horario-${sls:stage}-obtenerHorario
 
-custom:
-  documentation:
-    version: '1.0.0'
-    title: API de Compras
-    description: API para registrar, listar y eliminar compras de cursos por alumnos.
-    models:
-      - name: ComprarCurso
-        description: Modelo para registrar una compra
-        contentType: application/json
-        schema:
-          type: object
-          required: [tenant_id, curso_id, horario_id, estado]
-          properties:
-            tenant_id:
-              type: string
-            curso_id:
-              type: string
-            horario_id:
-              type: string
-            estado:
-              type: string
-              enum: [reservado, inscrito]
-      - name: EliminarCompra
-        description: Modelo para eliminar una compra
-        contentType: application/json
-        schema:
-          type: object
-          required: [tenant_id, curso_id]
-          properties:
-            tenant_id:
-              type: string
-            curso_id:
-              type: string
-      - name: ErrorResponse
-        description: Modelo de respuesta de error
-        contentType: application/json
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-
 functions:
   comprarCurso:
     handler: Lambda_Comprar.handler
@@ -67,28 +22,6 @@ functions:
           path: compra/comprar
           method: post
           cors: true
-          documentation:
-            summary: Comprar curso
-            description: Registra una compra para un alumno autenticado. Valida token, curso, horario y estado.
-            requestBody:
-              description: Información de la compra a registrar
-              required: true
-            requestModels:
-              'application/json': ComprarCurso
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Compra registrada exitosamente
-              - statusCode: 400
-                responseBody:
-                  description: Datos inválidos
-                responseModels:
-                  'application/json': ErrorResponse
-              - statusCode: 403
-                responseBody:
-                  description: No autorizado
-                responseModels:
-                  'application/json': ErrorResponse
 
   listarCompras:
     handler: Lambda_ListarCompras.handler
@@ -97,23 +30,6 @@ functions:
           path: compra/listar
           method: get
           cors: true
-          documentation:
-            summary: Listar compras
-            description: Lista compras por alumno o por curso dependiendo del rol del usuario.
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Lista de compras obtenida correctamente
-              - statusCode: 400
-                responseBody:
-                  description: Parámetros inválidos
-                responseModels:
-                  'application/json': ErrorResponse
-              - statusCode: 403
-                responseBody:
-                  description: No autorizado
-                responseModels:
-                  'application/json': ErrorResponse
 
   eliminarCompra:
     handler: Lambda_EliminarCompra.handler
@@ -122,28 +38,22 @@ functions:
           path: compra/eliminar
           method: delete
           cors: true
-          documentation:
-            summary: Eliminar compra
-            description: Elimina una compra en estado reservado o inscrito realizada por un alumno.
-            requestBody:
-              description: Identificación de la compra a eliminar
-              required: true
-            requestModels:
-              'application/json': EliminarCompra
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Compra eliminada correctamente
-              - statusCode: 400
-                responseBody:
-                  description: Datos inválidos
-                responseModels:
-                  'application/json': ErrorResponse
-              - statusCode: 403
-                responseBody:
-                  description: No autorizado
-                responseModels:
-                  'application/json': ErrorResponse
+
+  doc:
+    handler: lambda_Doc.lambda_handler
+    events:
+      - http:
+          path: doc
+          method: get
+      - http:
+          path: doc/{proxy+}
+          method: get
+
+package:
+  individually: false
+  include:
+    - '**/*.js'
+    - doc/**
 
 resources:
   Resources:

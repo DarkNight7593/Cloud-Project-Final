@@ -1,0 +1,258 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API de Compras",
+    "version": "1.0.0",
+    "description": "API para registrar, listar y eliminar compras de cursos por alumnos."
+  },
+  "paths": {
+    "/compra/comprar": {
+      "post": {
+        "summary": "Registrar compra",
+        "description": "Un alumno puede registrar una compra de curso en estado reservado o inscrito.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComprarCurso"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compra registrada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeExito"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Compra ya existe",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compra/eliminar": {
+      "delete": {
+        "summary": "Eliminar compra",
+        "description": "Un alumno puede eliminar una compra activa (inscrito o reservado).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EliminarCompra"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compra eliminada correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeExito"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan campos",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Compra no encontrada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compra/listar": {
+      "get": {
+        "summary": "Listar compras",
+        "description": "Lista compras según el rol del usuario. Alumnos ven sus compras, instructores y admins por curso.",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "curso_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["reservado", "inscrito"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 10 }
+          },
+          {
+            "name": "lastCursoId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "lastAlumnoDni",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compras listadas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListarComprasResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ComprarCurso": {
+        "type": "object",
+        "required": ["tenant_id", "curso_id", "horario_id", "estado"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "curso_id": { "type": "string" },
+          "horario_id": { "type": "string" },
+          "estado": {
+            "type": "string",
+            "enum": ["reservado", "inscrito"]
+          }
+        }
+      },
+      "EliminarCompra": {
+        "type": "object",
+        "required": ["tenant_id", "curso_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "curso_id": { "type": "string" }
+        }
+      },
+      "MensajeExito": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "detalle": { "type": "string" }
+        }
+      },
+      "ListarComprasResponse": {
+        "type": "object",
+        "properties": {
+          "compras": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "curso_id": { "type": "string" },
+                "estado": { "type": "string" },
+                "alumno_dni": { "type": "string" },
+                "alumno_nombre": { "type": "string" },
+                "instructor_dni": { "type": "string" },
+                "instructor_nombre": { "type": "string" },
+                "curso_nombre": { "type": "string" },
+                "dias": { "type": "string" },
+                "inicio_hora": { "type": "string" },
+                "fin_hora": { "type": "string" }
+              }
+            }
+          },
+          "paginacion": {
+            "type": "object",
+            "properties": {
+              "ultimoCursoId": { "type": "string" },
+              "ultimoAlumnoDni": { "type": "string" },
+              "total": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

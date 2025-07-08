@@ -1,14 +1,11 @@
 org: juanrodo
 service: api-curso
 
-plugins:
-  - serverless-openapi-documentation
-
 provider:
   name: aws
   runtime: nodejs22.x
   memorySize: 1024
-  timeout: 60
+  timeout: 30
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
@@ -18,107 +15,6 @@ provider:
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
     FUNCION_ELIMINAR_HORARIO: api-horario-${sls:stage}-eliminarHorario
 
-custom:
-  documentation:
-    version: 1.0.0
-    title: API de Cursos
-    description: Crud de cursos con validación y manejo de horarios.
-    models:
-      - name: CrearCursoRequest
-        contentType: application/json
-        schema:
-          type: object
-          required: [tenant_id, nombre, descripcion, inicio, fin, precio]
-          properties:
-            tenant_id: { type: string }
-            nombre: { type: string }
-            descripcion: { type: string }
-            inicio:
-              type: string
-              format: date
-            fin:
-              type: string
-              format: date
-            precio: { type: number }
-
-      - name: CursoResponse
-        contentType: application/json
-        schema:
-          type: object
-          properties:
-            curso_id: { type: string }
-            nombre: { type: string }
-            descripcion: { type: string }
-            inicio:
-              type: string
-              format: date
-            fin:
-              type: string
-              format: date
-            precio: { type: number }
-            instructor_dni: { type: string }
-            instructor_nombre: { type: string }
-            tenant_id: { type: string }
-
-      - name: ListarCursosResponse
-        contentType: application/json
-        schema:
-          type: object
-          properties:
-            cursos:
-              type: array
-              items:
-                $ref: '#/components/schemas/CursoResponse'
-            paginacion:
-              type: object
-              properties:
-                ultimoCursoId: { type: string }
-                total: { type: integer }
-
-      - name: ActualizarCursoRequest
-        contentType: application/json
-        schema:
-          type: object
-          properties:
-            nombre: { type: string }
-            descripcion: { type: string }
-            inicio:
-              type: string
-              format: date
-            fin:
-              type: string
-              format: date
-            precio: { type: number }
-
-      - name: ActualizarCursoResponse
-        contentType: application/json
-        schema:
-          type: object
-          properties:
-            message: { type: string }
-            curso_id: { type: string }
-            actualizaciones:
-              type: object
-              additionalProperties: true
-
-      - name: EliminarCursoRequest
-        contentType: application/json
-        schema:
-          type: object
-          required: [tenant_id, curso_id]
-          properties:
-            tenant_id: { type: string }
-            curso_id: { type: string }
-
-      - name: EliminarCursoResponse
-        contentType: application/json
-        schema:
-          type: object
-          properties:
-            message: { type: string }
-            curso_id: { type: string }
-            total_horarios: { type: integer }
-
 functions:
   crearCurso:
     handler: Lambda_CrearCurso.handler
@@ -127,17 +23,6 @@ functions:
           path: /curso/crear
           method: post
           cors: true
-          documentation:
-            summary: Crear curso
-            description: Crea un nuevo curso para el tenant.
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': CrearCursoRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Curso creado exitosamente
 
   listarCursos:
     handler: Lambda_ListarCursos.handler
@@ -146,15 +31,6 @@ functions:
           path: /curso/listar
           method: get
           cors: true
-          documentation:
-            summary: Listar cursos
-            description: Devuelve los cursos del tenant autenticado.
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Cursos listados correctamente
-                responseModels:
-                  'application/json': ListarCursosResponse
 
   obtenerCurso:
     handler: Lambda_BuscarCurso.handler
@@ -163,15 +39,6 @@ functions:
           path: /curso/buscar
           method: get
           cors: true
-          documentation:
-            summary: Obtener curso
-            description: Obtiene los datos de un curso dado su ID.
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Curso encontrado
-                responseModels:
-                  'application/json': CursoResponse
 
   actualizarCurso:
     handler: Lambda_ModiCurso.handler
@@ -180,19 +47,6 @@ functions:
           path: /curso/modificar
           method: put
           cors: true
-          documentation:
-            summary: Actualizar curso
-            description: Modifica los campos de un curso existente.
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': ActualizarCursoRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Curso actualizado correctamente
-                responseModels:
-                  'application/json': ActualizarCursoResponse
 
   eliminarCurso:
     handler: Lambda_EliminarCurso.handler
@@ -201,19 +55,18 @@ functions:
           path: /curso/eliminar
           method: delete
           cors: true
-          documentation:
-            summary: Eliminar curso
-            description: Elimina un curso junto a sus horarios.
-            requestBody:
-              required: true
-            requestModels:
-              'application/json': EliminarCursoRequest
-            methodResponses:
-              - statusCode: 200
-                responseBody:
-                  description: Curso eliminado exitosamente
-                responseModels:
-                  'application/json': EliminarCursoResponse
+
+  doc:
+    handler: Lambda_Doc.handler
+    events:
+      - http:
+          path: doc
+          method: get
+          cors: true
+      - http:
+          path: doc/{proxy+}
+          method: get
+          cors: true
 
 resources:
   Resources:
@@ -243,3 +96,9 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
+package:
+  individually: false
+  include:
+    - doc/**
+    - '**/*.js'

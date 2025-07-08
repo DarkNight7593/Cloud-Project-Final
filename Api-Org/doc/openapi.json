@@ -1,0 +1,189 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Organización",
+    "version": "1.0.0",
+    "description": "API para crear, buscar, listar y modificar organizaciones (tenants)"
+  },
+  "paths": {
+    "/org/crear": {
+      "post": {
+        "summary": "Crear organización",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearOrganizacionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización registrada correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaCrear"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Campos faltantes o inválidos"
+          }
+        }
+      }
+    },
+    "/org/buscar": {
+      "post": {
+        "summary": "Buscar organización",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuscarOrganizacionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organizacion"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Organización no encontrada"
+          }
+        }
+      }
+    },
+    "/org/listar": {
+      "get": {
+        "summary": "Listar organizaciones",
+        "responses": {
+          "200": {
+            "description": "Lista de organizaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaOrganizacionesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/modi": {
+      "put": {
+        "summary": "Modificar organización",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarOrganizacionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización actualizada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaModificacion"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token inválido o sin permisos"
+          },
+          "404": {
+            "description": "Organización no encontrada"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CrearOrganizacionRequest": {
+        "type": "object",
+        "required": ["tenant_id", "domain", "descripcion", "correo"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "domain": { "type": "string" },
+          "descripcion": { "type": "string" },
+          "correo": { "type": "string" }
+        }
+      },
+      "BuscarOrganizacionRequest": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" }
+        }
+      },
+      "ModificarOrganizacionRequest": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "domain": { "type": "string" },
+          "descripcion": { "type": "string" },
+          "correo": { "type": "string" }
+        }
+      },
+      "Organizacion": {
+        "type": "object",
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "domain": { "type": "string" },
+          "descripcion": { "type": "string" },
+          "correo": { "type": "string" }
+        }
+      },
+      "ListaOrganizacionesResponse": {
+        "type": "object",
+        "properties": {
+          "organizaciones": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Organizacion" }
+          },
+          "total": { "type": "integer" }
+        }
+      },
+      "RespuestaCrear": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "tenant_id": { "type": "string" }
+        }
+      },
+      "RespuestaModificacion": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "tenant_id": { "type": "string" },
+          "actualizados": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
