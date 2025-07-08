@@ -45,7 +45,7 @@ functions:
           method: put
           cors: true
   doc:
-    handler: Lambda_Doc.handler
+    handler: Lambda_Doc.lambda_handler
     events:
       - http:
           path: /doc
@@ -55,7 +55,7 @@ functions:
           path: /doc/{proxy+}
           method: get
           cors: true
-          
+
 package:
   individually: false
   include:

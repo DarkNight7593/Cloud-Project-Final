@@ -54,9 +54,9 @@ functions:
           path: /usuario/listar
           method: post
           cors: true
-          
+
   doc:
-    handler: Lambda_Doc.handler
+    handler: Lambda_Doc.lambda_handler
     events:
       - http:
           path: /doc

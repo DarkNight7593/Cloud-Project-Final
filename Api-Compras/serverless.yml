@@ -40,7 +40,7 @@ functions:
           cors: true
 
   doc:
-    handler: lambda_Doc.lambda_handler
+    handler: lambda_Doc.handler
     events:
       - http:
           path: doc
