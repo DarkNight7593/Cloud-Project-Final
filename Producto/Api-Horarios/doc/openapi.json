@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "API Horario",
-    "description": "API para gestionar horarios en un sistema educativo multitenant",
-    "version": "1.0.0"
+    "description": "API REST para gestionar horarios académicos en un sistema multitenant. Incluye creación, consulta, modificación y eliminación de horarios, con validación de autenticación mediante token JWT.",
+    "version": "1.0.1"
   },
   "components": {
     "securitySchemes": {
@@ -21,12 +21,14 @@
           "tenant_id": { "type": "string" },
           "dias": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": { "type": "string" },
+            "example": ["Lunes", "Miércoles", "Viernes"]
           },
-          "inicio_hora": { "type": "string" },
-          "fin_hora": { "type": "string" },
-          "tenant_id_curso_id": { "type": "string" }
-        }
+          "inicio_hora": { "type": "string", "example": "08:00" },
+          "fin_hora": { "type": "string", "example": "10:00" },
+          "tenant_id_curso_id": { "type": "string", "example": "tenant123#curso456" }
+        },
+        "required": ["horario_id", "tenant_id", "dias", "inicio_hora", "fin_hora", "tenant_id_curso_id"]
       }
     }
   },
@@ -37,6 +39,7 @@
     "/horario/crear": {
       "post": {
         "summary": "Crear un nuevo horario",
+        "description": "Permite crear un nuevo horario asociado a un curso específico para un tenant determinado. Valida colisiones de horario antes de guardar.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -44,13 +47,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "tenant_id",
-                  "curso_id",
-                  "dias",
-                  "inicio_hora",
-                  "fin_hora"
-                ],
+                "required": ["tenant_id", "curso_id", "dias", "inicio_hora", "fin_hora"],
                 "properties": {
                   "tenant_id": { "type": "string" },
                   "curso_id": { "type": "string" },
@@ -58,26 +55,55 @@
                     "type": "array",
                     "items": { "type": "string" }
                   },
-                  "inicio_hora": { "type": "string" },
-                  "fin_hora": { "type": "string" }
+                  "inicio_hora": { "type": "string", "format": "time" },
+                  "fin_hora": { "type": "string", "format": "time" }
+                }
+              },
+              "examples": {
+                "crearHorario": {
+                  "summary": "Ejemplo de horario",
+                  "value": {
+                    "tenant_id": "tenant123",
+                    "curso_id": "curso456",
+                    "dias": ["Lunes", "Miércoles"],
+                    "inicio_hora": "08:00",
+                    "fin_hora": "10:00"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Horario creado exitosamente" },
-          "400": { "description": "Faltan campos requeridos" },
+          "200": {
+            "description": "Horario creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "horario_id": { "type": "string" },
+                    "dias": { "type": "array", "items": { "type": "string" } },
+                    "inicio_hora": { "type": "string" },
+                    "fin_hora": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Faltan campos requeridos o datos inválidos" },
           "403": { "description": "Token o tenant_id no proporcionado" },
           "404": { "description": "Curso no encontrado" },
           "409": { "description": "Choque de horario" },
-          "500": { "description": "Error interno" }
+          "500": { "description": "Error interno del servidor" }
         }
       }
     },
     "/horario/listar": {
       "get": {
         "summary": "Listar horarios por curso",
+        "description": "Devuelve los horarios asociados a un curso específico para un tenant. Incluye paginación opcional.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
@@ -95,7 +121,7 @@
           {
             "name": "limit",
             "in": "query",
-            "schema": { "type": "integer" }
+            "schema": { "type": "integer", "default": 5 }
           },
           {
             "name": "lastHorarioId",
@@ -104,29 +130,42 @@
           }
         ],
         "responses": {
-          "200": { "description": "Lista de horarios" },
+          "200": {
+            "description": "Lista de horarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "horarios": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Horario" }
+                    },
+                    "paginacion": {
+                      "type": "object",
+                      "properties": {
+                        "ultimoHorarioId": { "type": "string", "nullable": true },
+                        "total": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "400": { "description": "Parámetros faltantes" },
-          "500": { "description": "Error interno" }
+          "500": { "description": "Error interno del servidor" }
         }
       }
     },
     "/horario/buscar": {
       "get": {
         "summary": "Buscar horario por ID",
+        "description": "Busca un horario específico a partir de tenant_id y horario_id.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          {
-            "name": "tenant_id",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          },
-          {
-            "name": "horario_id",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          }
+          { "name": "tenant_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "horario_id", "in": "query", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -144,6 +183,7 @@
     "/horario/modificar": {
       "put": {
         "summary": "Modificar un horario",
+        "description": "Actualiza un horario existente si no hay colisión con otros horarios del mismo curso.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -151,13 +191,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "tenant_id",
-                  "horario_id",
-                  "dias",
-                  "inicio_hora",
-                  "fin_hora"
-                ],
+                "required": ["tenant_id", "horario_id", "dias", "inicio_hora", "fin_hora"],
                 "properties": {
                   "tenant_id": { "type": "string" },
                   "horario_id": { "type": "string" },
@@ -173,15 +207,17 @@
           }
         },
         "responses": {
-          "200": { "description": "Horario actualizado" },
+          "200": { "description": "Horario actualizado correctamente" },
           "404": { "description": "Horario no encontrado" },
-          "409": { "description": "Choque de horario" }
+          "409": { "description": "Choque de horario detectado" },
+          "500": { "description": "Error interno del servidor" }
         }
       }
     },
     "/horario/eliminar": {
       "delete": {
         "summary": "Eliminar un horario",
+        "description": "Elimina un horario usando su ID y tenant asociado. Requiere token válido.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -199,8 +235,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Horario eliminado" },
-          "404": { "description": "Horario no encontrado" }
+          "200": { "description": "Horario eliminado exitosamente" },
+          "404": { "description": "Horario no encontrado" },
+          "500": { "description": "Error interno del servidor" }
         }
       }
     }

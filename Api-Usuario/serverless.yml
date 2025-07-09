@@ -54,7 +54,13 @@ functions:
           path: /usuario/listar
           method: post
           cors: true
-
+  listar:
+    handler: Lambda_BuscarUsuario.lambda_handler
+    events:
+      - http:
+          path: /usuario/buscar
+          method: post
+          cors: true
   doc:
     handler: Lambda_Doc.lambda_handler
     events:

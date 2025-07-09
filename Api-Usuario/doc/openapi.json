@@ -3,13 +3,13 @@
   "info": {
     "title": "API de Usuarios",
     "version": "1.0.0",
-    "description": "Endpoints para autenticación y gestión de usuarios"
+    "description": "Endpoints para autenticación, gestión y consulta de usuarios"
   },
   "paths": {
     "/usuario/crear": {
       "post": {
         "summary": "Crear usuario",
-        "description": "Registra un nuevo usuario (admin o instructor)",
+        "description": "Registra un nuevo usuario (admin o instructor). Se requiere token de un admin para crear instructores.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23,14 +23,21 @@
         "responses": {
           "200": {
             "description": "Usuario creado correctamente"
+          },
+          "403": {
+            "description": "Token inválido o permisos insuficientes"
+          },
+          "409": {
+            "description": "Ya existe un administrador para este tenant"
           }
-        }
+        },
+        "security": [{ "bearerAuth": [] }]
       }
     },
     "/usuario/login": {
       "post": {
         "summary": "Login de usuario",
-        "description": "Inicia sesión con credenciales válidas",
+        "description": "Inicia sesión con credenciales válidas (dni, password, rol)",
         "requestBody": {
           "required": true,
           "content": {
@@ -61,7 +68,7 @@
     "/usuario/logout": {
       "post": {
         "summary": "Logout usuario",
-        "description": "Cierra sesión y revoca el token",
+        "description": "Cierra sesión y revoca el token de acceso",
         "requestBody": {
           "required": true,
           "content": {
@@ -82,7 +89,7 @@
     "/usuario/validar": {
       "post": {
         "summary": "Validar token",
-        "description": "Valida el token de acceso JWT",
+        "description": "Valida un token emitido por el sistema",
         "requestBody": {
           "required": true,
           "content": {
@@ -105,7 +112,7 @@
             }
           },
           "403": {
-            "description": "Token inválido"
+            "description": "Token inválido o expirado"
           }
         }
       }
@@ -113,7 +120,7 @@
     "/usuario/listar": {
       "post": {
         "summary": "Listar usuarios",
-        "description": "Lista usuarios por rol (alumno o instructor)",
+        "description": "Lista usuarios por rol (alumno o instructor). Requiere token de un admin.",
         "requestBody": {
           "required": true,
           "content": {
@@ -134,12 +141,58 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token inválido o no autorizado"
           }
-        }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
+    "/usuario/buscar": {
+      "post": {
+        "summary": "Buscar usuario",
+        "description": "Busca un usuario por tenant, dni y rol. Requiere token de administrador.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuscarUsuarioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          },
+          "403": {
+            "description": "Token inválido o no autorizado"
+          }
+        },
+        "security": [{ "bearerAuth": [] }]
       }
     }
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "UUID"
+      }
+    },
     "schemas": {
       "CrearUsuarioRequest": {
         "type": "object",
@@ -228,7 +281,28 @@
           },
           "last_dni": { "type": "string" }
         }
+      },
+      "BuscarUsuarioRequest": {
+        "type": "object",
+        "required": ["tenant_id", "dni", "rol"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "dni": { "type": "string" },
+          "rol": {
+            "type": "string", "enum": ["admin", "instructor", "alumno"]
+          }
+        }
+      },
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "dni": { "type": "string" },
+          "full_name": { "type": "string" },
+          "rol": { "type": "string" },
+          "tenant_id_rol": { "type": "string" }
+        }
       }
     }
   }
 }
+

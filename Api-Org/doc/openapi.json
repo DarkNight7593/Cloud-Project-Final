@@ -1,150 +1,44 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "API Organización",
+    "title": "API de Organizaciones",
     "version": "1.0.0",
-    "description": "API para crear, buscar, listar y modificar organizaciones (tenants)"
-  },
-  "paths": {
-    "/org/crear": {
-      "post": {
-        "summary": "Crear organización",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearOrganizacionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Organización registrada correctamente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RespuestaCrear"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Campos faltantes o inválidos"
-          }
-        }
-      }
-    },
-    "/org/buscar": {
-      "post": {
-        "summary": "Buscar organización",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BuscarOrganizacionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Organización encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Organizacion"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Organización no encontrada"
-          }
-        }
-      }
-    },
-    "/org/listar": {
-      "get": {
-        "summary": "Listar organizaciones",
-        "responses": {
-          "200": {
-            "description": "Lista de organizaciones",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListaOrganizacionesResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/org/modi": {
-      "put": {
-        "summary": "Modificar organización",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ModificarOrganizacionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Organización actualizada exitosamente",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RespuestaModificacion"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Token inválido o sin permisos"
-          },
-          "404": {
-            "description": "Organización no encontrada"
-          }
-        }
-      }
-    }
+    "description": "API para crear, buscar, listar y modificar organizaciones (tenants). Algunos endpoints requieren autenticación y validación de roles mediante token JWT."
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {
       "CrearOrganizacionRequest": {
         "type": "object",
         "required": ["tenant_id", "domain", "descripcion", "correo"],
         "properties": {
-          "tenant_id": { "type": "string" },
-          "domain": { "type": "string" },
-          "descripcion": { "type": "string" },
-          "correo": { "type": "string" }
+          "tenant_id": { "type": "string", "example": "org001" },
+          "domain": { "type": "string", "example": "org001.edu" },
+          "descripcion": { "type": "string", "example": "Academia de Matemática" },
+          "correo": { "type": "string", "example": "admin@org001.edu" }
         }
       },
       "BuscarOrganizacionRequest": {
         "type": "object",
         "required": ["tenant_id"],
         "properties": {
-          "tenant_id": { "type": "string" }
+          "tenant_id": { "type": "string", "example": "org001" }
         }
       },
       "ModificarOrganizacionRequest": {
         "type": "object",
         "required": ["tenant_id"],
         "properties": {
-          "tenant_id": { "type": "string" },
-          "domain": { "type": "string" },
-          "descripcion": { "type": "string" },
-          "correo": { "type": "string" }
+          "tenant_id": { "type": "string", "example": "org001" },
+          "domain": { "type": "string", "example": "nuevo.org001.edu" },
+          "descripcion": { "type": "string", "example": "Nueva descripción" },
+          "correo": { "type": "string", "example": "nuevo@org001.edu" }
         }
       },
       "Organizacion": {
@@ -163,24 +57,173 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/Organizacion" }
           },
-          "total": { "type": "integer" }
+          "total": { "type": "integer", "example": 5 }
         }
       },
       "RespuestaCrear": {
         "type": "object",
         "properties": {
-          "message": { "type": "string" },
-          "tenant_id": { "type": "string" }
+          "message": { "type": "string", "example": "Org registered successfully" },
+          "tenant_id": { "type": "string", "example": "org001" }
         }
       },
       "RespuestaModificacion": {
         "type": "object",
         "properties": {
-          "message": { "type": "string" },
-          "tenant_id": { "type": "string" },
+          "message": { "type": "string", "example": "Organización actualizada correctamente" },
+          "tenant_id": { "type": "string", "example": "org001" },
           "actualizados": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": { "type": "string", "example": "descripcion" }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Token inválido o sin permisos" },
+          "detalle": { "type": "string", "example": "El usuario no tiene rol admin" }
+        }
+      }
+    }
+  },
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/org/crear": {
+      "post": {
+        "summary": "Crear una nueva organización",
+        "description": "Crea una nueva organización (tenant) en la base de datos.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CrearOrganizacionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RespuestaCrear" }
+              }
+            }
+          },
+          "400": {
+            "description": "Campos faltantes o inválidos",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/buscar": {
+      "post": {
+        "summary": "Buscar una organización por ID",
+        "description": "Devuelve la información de una organización a partir de su tenant_id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BuscarOrganizacionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización encontrada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Organizacion" }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró la organización",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/listar": {
+      "get": {
+        "summary": "Listar todas las organizaciones",
+        "description": "Devuelve una lista de todas las organizaciones existentes.",
+        "responses": {
+          "200": {
+            "description": "Listado completo de organizaciones",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ListaOrganizacionesResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Error del servidor al listar organizaciones",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/modi": {
+      "put": {
+        "summary": "Modificar una organización existente",
+        "description": "Modifica los campos permitidos de una organización. Solo accesible por usuarios con rol **admin**.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ModificarOrganizacionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización modificada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RespuestaModificacion" }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan campos o no se especificó qué modificar",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Token inválido o el usuario no tiene rol de administrador",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "La organización no existe",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
           }
         }
       }

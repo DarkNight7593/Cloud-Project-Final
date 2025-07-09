@@ -3,25 +3,39 @@
   "info": {
     "title": "API de Cursos",
     "version": "1.0.0",
-    "description": "Crud de cursos con validación y manejo de horarios."
+    "description": "API REST para la gestión de cursos. Los cursos son creados por instructores y validados mediante JWT emitido por el servicio de autenticación."
   },
   "paths": {
     "/curso/crear": {
       "post": {
         "summary": "Crear curso",
-        "description": "Permite a un instructor crear un nuevo curso.",
+        "description": "Permite a un instructor autenticado crear un nuevo curso en su tenant.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CrearCursoRequest" }
+              "schema": { "$ref": "#/components/schemas/CrearCursoRequest" },
+              "example": {
+                "tenant_id": "edu123",
+                "nombre": "Álgebra Lineal",
+                "descripcion": "Curso de fundamentos de álgebra matricial.",
+                "inicio": "2025-08-01",
+                "fin": "2025-12-01",
+                "precio": 250.00
+              }
             }
           }
         },
         "responses": {
           "200": {
             "description": "Curso creado exitosamente"
+          },
+          "401": {
+            "description": "Token inválido o ausente"
+          },
+          "403": {
+            "description": "Solo los instructores pueden crear cursos"
           }
         }
       }
@@ -29,7 +43,7 @@
     "/curso/listar": {
       "get": {
         "summary": "Listar cursos",
-        "description": "Devuelve los cursos del tenant autenticado.",
+        "description": "Lista los cursos registrados por un tenant, opcionalmente filtrando por instructor.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "limit", "in": "query", "schema": { "type": "integer" } },
@@ -45,14 +59,17 @@
                 "schema": { "$ref": "#/components/schemas/ListarCursosResponse" }
               }
             }
+          },
+          "401": {
+            "description": "Token inválido o ausente"
           }
         }
       }
     },
     "/curso/buscar": {
       "get": {
-        "summary": "Obtener curso",
-        "description": "Obtiene los datos de un curso dado su ID.",
+        "summary": "Buscar curso por ID",
+        "description": "Devuelve los datos de un curso dado su ID y tenant.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "curso_id", "in": "query", "required": true, "schema": { "type": "string" } },
@@ -66,14 +83,20 @@
                 "schema": { "$ref": "#/components/schemas/CursoResponse" }
               }
             }
+          },
+          "404": {
+            "description": "Curso no encontrado"
+          },
+          "401": {
+            "description": "Token inválido"
           }
         }
       }
     },
     "/curso/modificar": {
       "put": {
-        "summary": "Actualizar curso",
-        "description": "Modifica los campos de un curso existente.",
+        "summary": "Modificar curso",
+        "description": "Permite a un instructor o admin modificar un curso existente.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "curso_id", "in": "query", "required": true, "schema": { "type": "string" } },
@@ -95,6 +118,15 @@
                 "schema": { "$ref": "#/components/schemas/ActualizarCursoResponse" }
               }
             }
+          },
+          "403": {
+            "description": "No tiene permisos para modificar este curso"
+          },
+          "400": {
+            "description": "Parámetros incompletos o inválidos"
+          },
+          "401": {
+            "description": "Token inválido"
           }
         }
       }
@@ -102,7 +134,7 @@
     "/curso/eliminar": {
       "delete": {
         "summary": "Eliminar curso",
-        "description": "Elimina un curso junto a sus horarios.",
+        "description": "Elimina un curso junto con sus horarios. Solo accesible por el instructor creador o un admin.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -120,6 +152,15 @@
                 "schema": { "$ref": "#/components/schemas/EliminarCursoResponse" }
               }
             }
+          },
+          "403": {
+            "description": "No tiene permisos para eliminar este curso"
+          },
+          "404": {
+            "description": "Curso no encontrado"
+          },
+          "401": {
+            "description": "Token inválido"
           }
         }
       }
