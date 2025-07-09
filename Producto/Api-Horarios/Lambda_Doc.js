@@ -16,19 +16,31 @@ const MIME_TYPES = {
 
 exports.handler = async (event) => {
   try {
-    const reqPath = event.rawPath || '/doc';
     const basePath = path.resolve(__dirname, 'doc');
 
-    // Normaliza y evita path traversal
-    let relativePath = reqPath.replace(/^\/doc/, '') || '/index.html';
-    if (relativePath === '/') relativePath = '/index.html';
+    // Usamos path confiable
+    const reqPath = event.path || '/doc';
+    console.log(`🔍 Ruta solicitada: ${reqPath}`);
+
+    // Determinar ruta relativa
+    let relativePath = reqPath.replace(/^\/doc/, '');
+    if (relativePath === '' || relativePath === '/') {
+      relativePath = 'index.html';
+    } else {
+      relativePath = relativePath.replace(/^\/+/, '');
+    }
+
+    // Ruta completa protegida
     const safePath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
-    const filePath = path.join(basePath, safePath);
+    const filePath = path.resolve(basePath, safePath);
 
-    console.log(`🔍 Solicitado: ${reqPath}`);
-    console.log(`📄 Resuelto: ${filePath}`);
+    // Verificación de seguridad
+    if (!filePath.startsWith(basePath)) {
+      console.warn(`🚫 Intento de acceso no permitido: ${filePath}`);
+      return forbiddenResponse();
+    }
 
-    // Verifica existencia
+    // Verifica existencia del archivo
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
       throw new Error('Archivo no encontrado o es un directorio');
     }
@@ -37,15 +49,16 @@ exports.handler = async (event) => {
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
     const fileBuffer = fs.readFileSync(filePath);
 
-    // Detectar si es binario
     const isBinary = !contentType.startsWith('text') && contentType !== 'application/json';
+
+    console.log(`✅ Archivo servido: ${filePath} (${contentType})`);
 
     return {
       statusCode: 200,
       headers: {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Headers': '*'
       },
       body: isBinary ? fileBuffer.toString('base64') : fileBuffer.toString('utf-8'),
       isBase64Encoded: isBinary
@@ -57,7 +70,7 @@ exports.handler = async (event) => {
       statusCode: 404,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Headers': '*'
       },
       body: JSON.stringify({
         error: 'Archivo no encontrado',
@@ -66,3 +79,15 @@ exports.handler = async (event) => {
     };
   }
 };
+
+function forbiddenResponse() {
+  return {
+    statusCode: 403,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': '*'
+    },
+    body: JSON.stringify({ error: 'Acceso denegado' })
+  };
+}
+
