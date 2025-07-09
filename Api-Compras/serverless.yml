@@ -45,9 +45,11 @@ functions:
       - http:
           path: doc
           method: get
+          cors: true
       - http:
           path: doc/{proxy+}
           method: get
+          cors: true
 
 package:
   individually: false
