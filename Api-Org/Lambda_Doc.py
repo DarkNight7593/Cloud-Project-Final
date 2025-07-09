@@ -8,46 +8,46 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        # Base de los archivos (doc/index.html, doc/openapi.json)
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'doc'))
 
-        # Ruta solicitada (viene como /doc o /doc/openapi.json)
-        req_path = event.get('rawPath', '/doc')
-        logger.info(f"Path solicitado: {req_path}")
+        # ✅ Usa 'path' (es más confiable que rawPath)
+        req_path = event.get('path', '/doc')
+        logger.info(f"Ruta solicitada: {req_path}")
 
-        # Quitar el prefijo /doc
+        # ✅ Quita el prefijo '/doc' y define el archivo destino
         relative_path = req_path.replace('/doc', '', 1)
         if relative_path in ['', '/']:
             relative_path = 'index.html'
         else:
             relative_path = relative_path.lstrip('/')
 
-        # Construir ruta final
+        # ✅ Normaliza la ruta final al archivo
         file_path = os.path.abspath(os.path.join(base_path, os.path.normpath(relative_path)))
 
-        # Seguridad: que esté dentro de /doc
+        # ✅ Verificación de seguridad (evita salir de /doc)
         if not file_path.startswith(base_path):
-            logger.warning(f"Intento de acceso no permitido: {file_path}")
-            return response(403, 'Acceso denegado')
+            logger.warning(f"Acceso no permitido: {file_path}")
+            return forbidden_response()
 
-        # Verifica existencia
+        # ✅ Verifica si el archivo existe
         if not os.path.isfile(file_path):
             logger.warning(f"Archivo no encontrado: {file_path}")
-            return response(404, f'Archivo no encontrado: {relative_path}')
+            return not_found_response(file_path)
 
-        # Tipo de contenido
+        # ✅ Detecta el tipo MIME
         content_type, _ = mimetypes.guess_type(file_path)
         content_type = content_type or 'application/octet-stream'
 
-        # Leer archivo
         with open(file_path, 'rb') as f:
             content = f.read()
 
         is_binary = not content_type.startswith('text') and content_type not in [
-            'application/json', 'application/javascript'
+            'application/json',
+            'application/javascript'
         ]
 
-        logger.info(f'Sirviendo: {relative_path} ({content_type})')
+        logger.info(f"Archivo servido: {file_path} (binary={is_binary})")
+
         return {
             'statusCode': 200,
             'headers': {**cors_headers(), 'Content-Type': content_type},
@@ -56,8 +56,26 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        logger.exception('Error en Lambda')
-        return response(500, f'Error del servidor: {str(e)}')
+        logger.exception('Error inesperado')
+        return {
+            'statusCode': 500,
+            'headers': cors_headers(),
+            'body': f'Error interno: {str(e)}'
+        }
+
+def not_found_response(path):
+    return {
+        'statusCode': 404,
+        'headers': cors_headers(),
+        'body': f'Archivo no encontrado: {path}'
+    }
+
+def forbidden_response():
+    return {
+        'statusCode': 403,
+        'headers': cors_headers(),
+        'body': 'Acceso denegado'
+    }
 
 def cors_headers():
     return {
@@ -66,10 +84,4 @@ def cors_headers():
         'Access-Control-Allow-Methods': 'GET,OPTIONS'
     }
 
-def response(code, body):
-    return {
-        'statusCode': code,
-        'headers': cors_headers(),
-        'body': body
-    }
 
