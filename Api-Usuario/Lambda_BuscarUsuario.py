@@ -11,26 +11,25 @@ TABLE_USER = os.environ['TABLE_USER']
 
 def lambda_handler(event, context):
     try:
-        # Parsear body si es string
-        if isinstance(event['body'], str):
-            body = json.loads(event['body'])
-        else:
-            body = event['body']
+        # ✅ Obtener parámetros desde query string (GET)
+        query_params = event.get('queryStringParameters') or {}
 
-        tenant_id = body.get('tenant_id')
-        dni = body.get('dni')
-        rol = body.get('rol', '').lower()
+        tenant_id = query_params.get('tenant_id')
+        dni = query_params.get('dni')
+        rol = query_params.get('rol', '').lower()
 
+        # ❗ Verificación de campos obligatorios
         if not all([tenant_id, dni, rol]):
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Faltan tenant_id, dni o rol'})
+                'body': json.dumps({'error': 'Faltan tenant_id, dni o rol en la URL'})
             }
 
         tenant_id_rol = f"{tenant_id}#{rol}"
         tabla = dynamodb.Table(TABLE_USER)
 
+        # 🔍 Buscar usuario
         response = tabla.get_item(
             Key={
                 'tenant_id_rol': tenant_id_rol,

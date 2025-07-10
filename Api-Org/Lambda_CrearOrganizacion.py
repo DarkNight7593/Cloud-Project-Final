@@ -8,52 +8,56 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        body= event['body']
-        # Acceso directo a campos
+        body = event.get('body')
         if isinstance(body, str):
             body = json.loads(body)
-        tenant_id = body['tenant_id']
-        domain = body['domain']
-        descripcion = body['descripcion']
-        correo = body['correo']
-        nombre_tabla = os.environ["TABLE_ORG"]
 
-        # Validar que no estén vacíos
-        if not all([tenant_id, domain, descripcion, correo]):
+        tenant_id = body.get('tenant_id')
+        dominio = body.get('dominio')
+        descripcion = body.get('descripcion')
+        correo = body.get('correo')
+        detalle = body.get('detalle')  # opcional
+
+        if not all([tenant_id, dominio, descripcion, correo]):
             return {
                 'statusCode': 400,
                 'body': json.dumps({
-                    'error': 'Faltan uno o más campos: tenant_id, domain, descripcion, correo'
+                    'error': 'Faltan uno o más campos requeridos: tenant_id, dominio, descripcion, correo'
                 })
             }
+
+        nombre_tabla = os.environ["TABLE_ORG"]
+        dynamodb = boto3.resource('dynamodb')
+        t_org = dynamodb.Table(nombre_tabla)
+
         # Verificar si ya existe el tenant_id
         respuesta = t_org.get_item(Key={'tenant_id': tenant_id})
         if 'Item' in respuesta:
             return {
                 'statusCode': 409,
                 'body': json.dumps({
-                'error': f"Ya existe un tenant con ID '{tenant_id}'"
+                    'error': f"Ya existe una organización con tenant_id '{tenant_id}'"
                 })
             }
 
+        # Armar el ítem con o sin 'detalle'
+        item = {
+            'tenant_id': tenant_id,
+            'descripcion': descripcion,
+            'correo': correo,
+            'dominio': dominio
+        }
 
-        # Insertar en la tabla DynamoDB
-        dynamodb = boto3.resource('dynamodb')
-        t_org = dynamodb.Table(nombre_tabla)
+        if detalle is not None:
+            item['detalle'] = detalle  # Puede ser dict o string (según como lo pases)
 
-        t_org.put_item(
-            Item={
-                'tenant_id': tenant_id,
-                'descripcion': descripcion,
-                'correo': correo,
-                'domain': domain
-            }
-        )
+        # Insertar en la tabla
+        t_org.put_item(Item=item)
 
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'Org registered successfully',
+                'message': 'Organización registrada exitosamente',
                 'tenant_id': tenant_id
             })
         }
@@ -75,5 +79,3 @@ def lambda_handler(event, context):
                 'detalle': str(e)
             })
         }
-
-    

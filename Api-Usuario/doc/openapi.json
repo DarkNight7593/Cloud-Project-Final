@@ -150,19 +150,32 @@
       }
     },
     "/usuario/buscar": {
-      "post": {
+      "get": {
         "summary": "Buscar usuario",
-        "description": "Busca un usuario por tenant, dni y rol. Requiere token de administrador.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BuscarUsuarioRequest"
-              }
+        "description": "Busca un usuario por tenant, dni y rol. Usa parámetros en query string.",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "dni",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "rol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["admin", "instructor", "alumno"]
             }
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Usuario encontrado",
@@ -176,12 +189,8 @@
           },
           "404": {
             "description": "Usuario no encontrado"
-          },
-          "403": {
-            "description": "Token inválido o no autorizado"
           }
-        },
-        "security": [{ "bearerAuth": [] }]
+        }
       }
     }
   },
@@ -205,6 +214,10 @@
           "rol": {
             "type": "string",
             "enum": ["admin", "instructor"]
+          },
+          "detalles": {
+            "type": "object",
+            "description": "Información adicional opcional del usuario"
           }
         }
       },
@@ -271,26 +284,10 @@
           "usuarios": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "dni": { "type": "string" },
-                "full_name": { "type": "string" },
-                "rol": { "type": "string" }
-              }
+              "$ref": "#/components/schemas/Usuario"
             }
           },
           "last_dni": { "type": "string" }
-        }
-      },
-      "BuscarUsuarioRequest": {
-        "type": "object",
-        "required": ["tenant_id", "dni", "rol"],
-        "properties": {
-          "tenant_id": { "type": "string" },
-          "dni": { "type": "string" },
-          "rol": {
-            "type": "string", "enum": ["admin", "instructor", "alumno"]
-          }
         }
       },
       "Usuario": {
@@ -299,10 +296,13 @@
           "dni": { "type": "string" },
           "full_name": { "type": "string" },
           "rol": { "type": "string" },
-          "tenant_id_rol": { "type": "string" }
+          "tenant_id_rol": { "type": "string" },
+          "detalles": {
+            "type": "object",
+            "description": "Información adicional asociada al usuario"
+          }
         }
       }
     }
   }
 }
-

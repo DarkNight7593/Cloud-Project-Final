@@ -60,7 +60,7 @@ functions:
     events:
       - http:
           path: /usuario/buscar
-          method: post
+          method: get
           cors: true
 
   doc:

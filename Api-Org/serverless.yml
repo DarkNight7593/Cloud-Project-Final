@@ -34,7 +34,7 @@ functions:
     events:
       - http:
           path: /org/buscar
-          method: post
+          method: get
           cors: true
 
   modificarorg:

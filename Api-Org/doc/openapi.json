@@ -21,14 +21,12 @@
           "tenant_id": { "type": "string", "example": "org001" },
           "domain": { "type": "string", "example": "org001.edu" },
           "descripcion": { "type": "string", "example": "Academia de Matemática" },
-          "correo": { "type": "string", "example": "admin@org001.edu" }
-        }
-      },
-      "BuscarOrganizacionRequest": {
-        "type": "object",
-        "required": ["tenant_id"],
-        "properties": {
-          "tenant_id": { "type": "string", "example": "org001" }
+          "correo": { "type": "string", "example": "admin@org001.edu" },
+          "detalle": {
+            "type": "object",
+            "description": "Información adicional opcional",
+            "example": { "pais": "Perú", "ruc": "12345678" }
+          }
         }
       },
       "ModificarOrganizacionRequest": {
@@ -38,7 +36,12 @@
           "tenant_id": { "type": "string", "example": "org001" },
           "domain": { "type": "string", "example": "nuevo.org001.edu" },
           "descripcion": { "type": "string", "example": "Nueva descripción" },
-          "correo": { "type": "string", "example": "nuevo@org001.edu" }
+          "correo": { "type": "string", "example": "nuevo@org001.edu" },
+          "detalle": {
+            "type": "object",
+            "description": "Información adicional opcional",
+            "example": { "pais": "México" }
+          }
         }
       },
       "Organizacion": {
@@ -47,7 +50,11 @@
           "tenant_id": { "type": "string" },
           "domain": { "type": "string" },
           "descripcion": { "type": "string" },
-          "correo": { "type": "string" }
+          "correo": { "type": "string" },
+          "detalle": {
+            "type": "object",
+            "description": "Información adicional opcional"
+          }
         }
       },
       "ListaOrganizacionesResponse": {
@@ -119,22 +126,31 @@
                 "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
+          },
+          "409": {
+            "description": "Tenant ID ya registrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
           }
         }
       }
     },
     "/org/buscar": {
-      "post": {
+      "get": {
         "summary": "Buscar una organización por ID",
         "description": "Devuelve la información de una organización a partir de su tenant_id.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/BuscarOrganizacionRequest" }
-            }
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID del tenant a buscar"
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Organización encontrada",

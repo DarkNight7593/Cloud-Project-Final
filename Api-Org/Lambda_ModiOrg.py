@@ -8,20 +8,20 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        token = event['headers']['Authorization']
-        body = event['body']
+        token = event['headers'].get('Authorization')
+        body = event.get('body')
 
         if isinstance(body, str):
             body = json.loads(body)
 
-        tenant_id = body['tenant_id']
+        tenant_id = body.get('tenant_id')
         if not token or not tenant_id:
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Faltan token o tenant_id'})
             }
 
-        # 2. Validar token con función Lambda externa
+        # Validar token con Lambda externa
         lambda_client = boto3.client('lambda')
         funcion_validar = os.environ['FUNCION_VALIDAR']
 
@@ -44,13 +44,13 @@ def lambda_handler(event, context):
             }
 
         user_info = json.loads(validar_payload['body'])
-        if user_info['rol'] != 'admin':
+        if user_info.get('rol') != 'admin':
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'Solo un administrador puede modificar la organización'})
             }
 
-        # 3. Verificar si la organización existe
+        # Verificar si existe
         dynamodb = boto3.resource('dynamodb')
         tabla = dynamodb.Table(os.environ["TABLE_ORG"])
 
@@ -61,21 +61,23 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': f"No existe organización con tenant_id '{tenant_id}'"})
             }
 
-        # 4. Preparar campos permitidos a actualizar
-        campos_permitidos = ['domain', 'descripcion', 'correo']
+        # Campos permitidos a actualizar
+        campos_permitidos = ['dominio', 'descripcion', 'correo', 'detalle']
         update_expr = []
         expr_values = {}
         expr_names = {}
+        actualizados = []
 
         for campo in campos_permitidos:
             if campo in body:
-                value_placeholder = f":{campo[0]}"
-                if campo == "domain":
-                    update_expr.append(f"#domain = {value_placeholder}")
-                    expr_names["#domain"] = "domain"
+                placeholder = f":val_{campo}"
+                if campo in ['dominio']:  # en caso de conflicto con palabras reservadas
+                    expr_names[f"#{campo}"] = campo
+                    update_expr.append(f"#{campo} = {placeholder}")
                 else:
-                    update_expr.append(f"{campo} = {value_placeholder}")
-                expr_values[value_placeholder] = body[campo]
+                    update_expr.append(f"{campo} = {placeholder}")
+                expr_values[placeholder] = body[campo]
+                actualizados.append(campo)
 
         if not update_expr:
             return {
@@ -102,7 +104,7 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'message': 'Organización actualizada correctamente',
                 'tenant_id': tenant_id,
-                'actualizados': list(expr_values.keys())
+                'actualizados': actualizados
             })
         }
 
@@ -120,5 +122,3 @@ def lambda_handler(event, context):
                 'detalle': str(e)
             })
         }
-
-

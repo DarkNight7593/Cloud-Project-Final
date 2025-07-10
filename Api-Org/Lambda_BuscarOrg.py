@@ -8,11 +8,18 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        body= event['body']
-        # Acceso directo a campos
-        if isinstance(body, str):
-            body = json.loads(body)
-        tenant_id = body['tenant_id']
+        # Obtener tenant_id desde query parameters (GET)
+        query_params = event.get('queryStringParameters') or {}
+
+        tenant_id = query_params.get('tenant_id')
+        if not tenant_id:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'error': 'Debe proporcionar tenant_id como parámetro en la URL (query string)'
+                })
+            }
+
         nombre_tabla = os.environ["TABLE_ORG"]
 
         # DynamoDB setup
@@ -35,13 +42,6 @@ def lambda_handler(event, context):
             'body': json.dumps(response['Item'])
         }
 
-    except KeyError as e:
-        return {
-            'statusCode': 400,
-            'body': json.dumps({
-                'error': f"Falta el campo requerido en el body: {str(e)}"
-            })
-        }
     except Exception as e:
         logger.error("Error al buscar organización", exc_info=True)
         return {

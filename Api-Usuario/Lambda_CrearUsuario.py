@@ -21,6 +21,7 @@ def lambda_handler(event, context):
         full_name = body['full_name']
         password = body['password']
         rol = body['rol'].lower()
+        detalles = body.get('detalles')  # 👈 campo opcional
 
         if not all([tenant_id, dni, full_name, password, rol]):
             return {
@@ -29,7 +30,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Faltan tenant_id, dni, full_name, password o rol'})
             }
 
-        # 🔍 1️⃣ Validar tenant usando Lambda externo FUNCION_ORG
+        # 🔍 1️⃣ Validar tenant usando Lambda externo
         lambda_client = boto3.client('lambda')
         FUNCION_ORG = os.environ['FUNCION_ORG']
 
@@ -37,14 +38,13 @@ def lambda_handler(event, context):
             FunctionName=FUNCION_ORG,
             InvocationType='RequestResponse',
             Payload=json.dumps({
-                'body': {
+                'queryStringParameters': {
                     'tenant_id': tenant_id
                 }
             })
         )
 
         buscar_org_payload = json.loads(buscar_org_resp['Payload'].read())
-
         if buscar_org_payload.get('statusCode') != 200:
             return {
                 'statusCode': 404,
@@ -92,7 +92,6 @@ def lambda_handler(event, context):
                 })
             )
             payload = json.loads(validacion['Payload'].read())
-
             if payload.get('statusCode') != 200:
                 return {
                     'statusCode': 403,
@@ -110,14 +109,25 @@ def lambda_handler(event, context):
 
         # 📝 4️⃣ Registrar usuario
         hashed_password = hash_password(password)
-        tabla_usuarios.put_item(Item={
+        item = {
             'tenant_id_rol': tenant_id_rol,
             'dni': dni,
             'full_name': full_name,
             'rol': rol,
             'password': hashed_password
-        })
+        }
 
+        # ➕ Agregar campo opcional detalles si está presente y es un objeto
+        if detalles is not None:
+            if not isinstance(detalles, dict):
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'El campo "detalles" debe ser un objeto JSON'})
+                }
+            item['detalles'] = detalles
+
+        tabla_usuarios.put_item(Item=item)
         logger.info(f"Usuario registrado: {dni} ({rol}) en {tenant_id}")
 
         return {
@@ -127,7 +137,8 @@ def lambda_handler(event, context):
                 'message': 'Usuario registrado exitosamente',
                 'dni': dni,
                 'full_name': full_name,
-                'rol': rol
+                'rol': rol,
+                'detalles': detalles if detalles else {}
             })
         }
 
