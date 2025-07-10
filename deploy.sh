@@ -38,4 +38,4 @@ deploy_node_service "Producto/Api-Horarios"
 deploy_node_service "Producto/Api-Cursos"
 deploy_node_service "Api-Compras"
 
-echo -e "${GREEN}🚀 Despliegue completo y documentación publicada en SwaggerHub.${NC}"
+echo -e "${GREEN}🚀 Despliegue completo.${NC}"
