@@ -26,6 +26,16 @@ def lambda_handler(event, context):
                     'error': 'Faltan uno o más campos: tenant_id, domain, descripcion, correo'
                 })
             }
+        # Verificar si ya existe el tenant_id
+        respuesta = t_org.get_item(Key={'tenant_id': tenant_id})
+        if 'Item' in respuesta:
+            return {
+                'statusCode': 409,
+                'body': json.dumps({
+                'error': f"Ya existe un tenant con ID '{tenant_id}'"
+                })
+            }
+
 
         # Insertar en la tabla DynamoDB
         dynamodb = boto3.resource('dynamodb')

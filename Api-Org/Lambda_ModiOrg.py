@@ -9,7 +9,7 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event, context):
     try:
         token = event['headers']['Authorization']
-        body= event['body']
+        body = event['body']
 
         if isinstance(body, str):
             body = json.loads(body)
@@ -21,7 +21,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Faltan token o tenant_id'})
             }
 
-        # 2. Validar token
+        # 2. Validar token con función Lambda externa
         lambda_client = boto3.client('lambda')
         funcion_validar = os.environ['FUNCION_VALIDAR']
 
@@ -40,9 +40,7 @@ def lambda_handler(event, context):
         if validar_payload.get('statusCode') != 200:
             return {
                 'statusCode': validar_payload.get('statusCode', 403),
-                'body': json.dumps({
-                    'error': 'Token inválido o expirado'
-                })
+                'body': json.dumps({'error': 'Token inválido o expirado'})
             }
 
         user_info = json.loads(validar_payload['body'])
@@ -63,15 +61,21 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': f"No existe organización con tenant_id '{tenant_id}'"})
             }
 
-        # 4. Preparar actualización con los campos permitidos
+        # 4. Preparar campos permitidos a actualizar
         campos_permitidos = ['domain', 'descripcion', 'correo']
         update_expr = []
         expr_values = {}
+        expr_names = {}
 
         for campo in campos_permitidos:
             if campo in body:
-                update_expr.append(f"{campo} = :{campo[0]}")
-                expr_values[f":{campo[0]}"] = body[campo]
+                value_placeholder = f":{campo[0]}"
+                if campo == "domain":
+                    update_expr.append(f"#domain = {value_placeholder}")
+                    expr_names["#domain"] = "domain"
+                else:
+                    update_expr.append(f"{campo} = {value_placeholder}")
+                expr_values[value_placeholder] = body[campo]
 
         if not update_expr:
             return {
@@ -81,11 +85,17 @@ def lambda_handler(event, context):
 
         update_expression = "SET " + ", ".join(update_expr)
 
-        tabla.update_item(
-            Key={'tenant_id': tenant_id},
-            UpdateExpression=update_expression,
-            ExpressionAttributeValues=expr_values
-        )
+        # Ejecutar actualización
+        update_args = {
+            'Key': {'tenant_id': tenant_id},
+            'UpdateExpression': update_expression,
+            'ExpressionAttributeValues': expr_values
+        }
+
+        if expr_names:
+            update_args['ExpressionAttributeNames'] = expr_names
+
+        tabla.update_item(**update_args)
 
         return {
             'statusCode': 200,
@@ -110,4 +120,5 @@ def lambda_handler(event, context):
                 'detalle': str(e)
             })
         }
+
 
