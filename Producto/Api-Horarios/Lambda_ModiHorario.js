@@ -17,7 +17,7 @@ exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
     const body = JSON.parse(event.body);
-    const { tenant_id, horario_id, dias, inicio_hora, fin_hora } = body;
+    const { tenant_id, horario_id } = body;
 
     if (!token || !tenant_id || !horario_id) {
       return {
@@ -47,7 +47,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Buscar horario usando índice secundario
+    // Buscar horario existente
     const result = await dynamodb.query({
       TableName: TABLE_HORARIO,
       IndexName: 'tenant_horario_index',
@@ -69,7 +69,12 @@ exports.handler = async (event) => {
     const existing = result.Items[0];
     const tenant_id_curso_id = existing.tenant_id_curso_id;
 
-    // Verificar colisiones
+    // Usar valores antiguos si no se envían nuevos
+    const dias = body.dias ?? existing.dias;
+    const inicio_hora = body.inicio_hora ?? existing.inicio_hora;
+    const fin_hora = body.fin_hora ?? existing.fin_hora;
+
+    // Verificar colisiones con otros horarios del mismo curso
     const horarios = await dynamodb.query({
       TableName: TABLE_HORARIO,
       KeyConditionExpression: 'tenant_id_curso_id = :pk',
@@ -91,8 +96,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // Actualizar horario
+    // Actualizar horario con los nuevos o antiguos valores
     const item = {
+      tenant_id,
       tenant_id_curso_id,
       horario_id,
       dias,
