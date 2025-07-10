@@ -41,7 +41,7 @@ def lambda_handler(event, context):
 
         if not token or not tenant_id:
             return {
-                'statusCode': 403,
+                'statusCode': 404,
                 'body': json.dumps({'error': 'Token y tenant_id son requeridos'})
             }
 
@@ -76,7 +76,7 @@ def lambda_handler(event, context):
 
         if usuario['rol'] != 'admin':
             return {
-                'statusCode': 403,
+                'statusCode': 404,
                 'body': json.dumps({'error': 'Solo administradores pueden listar usuarios'})
             }
 

@@ -13,7 +13,7 @@ exports.handler = async (event) => {
     // Validación inicial
     if (!token || !tenant_id) {
       return {
-        statusCode: 403,
+        statusCode: 404,
         body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
       };
     }

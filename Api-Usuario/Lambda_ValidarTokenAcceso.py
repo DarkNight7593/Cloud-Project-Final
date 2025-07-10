@@ -33,7 +33,7 @@ def lambda_handler(event, context):
 
         if 'Item' not in response:
             return {
-                'statusCode': 400,
+                'statusCode': 403,
                 'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({'error': 'Token no existe'})
             }

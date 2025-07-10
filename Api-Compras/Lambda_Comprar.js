@@ -18,7 +18,7 @@ exports.handler = async (event) => {
 
     if (!token || !tenant_id) {
       return {
-        statusCode: 403,
+        statusCode: 404,
         body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
       };
     }
@@ -48,7 +48,7 @@ exports.handler = async (event) => {
     const { rol, dni, full_name } = usuario;
     if (rol !== 'alumno') {
       return {
-        statusCode: 403,
+        statusCode: 404,
         body: JSON.stringify({ error: 'Solo los alumnos pueden registrar compras' })
       };
     }

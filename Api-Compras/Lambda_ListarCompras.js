@@ -133,7 +133,7 @@ exports.handler = async (event) => {
     }
 
     return {
-      statusCode: 403,
+      statusCode: 404,
       body: JSON.stringify({ error: 'Rol no autorizado' })
     };
 

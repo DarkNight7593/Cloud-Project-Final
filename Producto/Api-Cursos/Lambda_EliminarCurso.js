@@ -74,7 +74,7 @@ exports.handler = async (event) => {
     // Solo puede eliminarlo el admin o el instructor que lo creó
     if (rol !== 'admin' && dni !== instructorDni) {
       return {
-        statusCode: 403,
+        statusCode: 401,
         body: JSON.stringify({ error: 'No tiene permisos para eliminar este curso' })
       };
     }

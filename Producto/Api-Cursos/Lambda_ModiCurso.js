@@ -12,7 +12,7 @@ exports.handler = async (event) => {
 
     if (!token || !tenant_id) {
       return {
-        statusCode: 403,
+        statusCode: 404,
         body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
       };
     }
@@ -71,7 +71,7 @@ exports.handler = async (event) => {
     // Solo puede editar si es admin o el instructor del curso
     if (rol !== 'admin' && dni !== cursoInstructor) {
       return {
-        statusCode: 403,
+        statusCode: 401,
         body: JSON.stringify({ error: 'No tiene permisos para editar este curso' })
       };
     }

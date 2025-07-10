@@ -75,7 +75,7 @@ def lambda_handler(event, context):
             token = event.get('headers', {}).get('Authorization')
             if not token:
                 return {
-                    'statusCode': 403,
+                    'statusCode': 404,
                     'headers': {'Content-Type': 'application/json'},
                     'body': json.dumps({'error': 'Token requerido para crear un instructor'})
                 }
@@ -102,7 +102,7 @@ def lambda_handler(event, context):
             usuario_autenticado = json.loads(payload['body']) if isinstance(payload['body'], str) else payload['body']
             if usuario_autenticado.get('rol') != 'admin':
                 return {
-                    'statusCode': 403,
+                    'statusCode': 401,
                     'headers': {'Content-Type': 'application/json'},
                     'body': json.dumps({'error': 'Solo administradores pueden crear instructores'})
                 }
