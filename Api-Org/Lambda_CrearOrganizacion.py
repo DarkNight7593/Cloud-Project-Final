@@ -8,11 +8,14 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
+        body= event['body']
         # Acceso directo a campos
-        tenant_id = event['body']['tenant_id']
-        domain = event['body']['domain']
-        descripcion = event['body']['descripcion']
-        correo = event['body']['correo']
+        if isinstance(body, str):
+            body = json.loads(body)
+        tenant_id = body['tenant_id']
+        domain = body['domain']
+        descripcion = body['descripcion']
+        correo = body['correo']
         nombre_tabla = os.environ["TABLE_ORG"]
 
         # Validar que no estén vacíos

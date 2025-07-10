@@ -8,9 +8,11 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        # 1. Extraer headers y body (todo con [])
         token = event['headers']['Authorization']
-        body = event['body']
+        body= event['body']
+
+        if isinstance(body, str):
+            body = json.loads(body)
 
         tenant_id = body['tenant_id']
         if not token or not tenant_id:
