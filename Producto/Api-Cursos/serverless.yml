@@ -87,6 +87,8 @@ resources:
           - AttributeName: curso_id
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
         GlobalSecondaryIndexes:
           - IndexName: tenant_instructor_index
             KeySchema:
@@ -97,8 +99,17 @@ resources:
             Projection:
               ProjectionType: ALL
 
+  Outputs:
+    TablaCursosStreamArn:
+      Description: ARN del Stream de la tabla de cursos
+      Value:
+        Fn::GetAtt:
+          - TablaCursos
+          - StreamArn
+      Export:
+        Name: ${self:service}-${sls:stage}-CursoStreamArn
+
 package:
   individually: false
   include:
     - '**'
-
