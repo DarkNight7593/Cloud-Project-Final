@@ -16,9 +16,8 @@ def json_serial(obj):
 def lambda_handler(event, context):
     try:
         # Obtener tenant_id desde query parameters (GET)
-        query_params = event.get('queryStringParameters') or {}
-
-        tenant_id = query_params.get('tenant_id')
+        tenant_id = event.get('params', {}).get('querystring', {}).get('tenant_id')
+        
         if not tenant_id:
             return {
                 'statusCode': 400,
