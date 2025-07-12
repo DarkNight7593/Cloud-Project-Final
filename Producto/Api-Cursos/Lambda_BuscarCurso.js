@@ -8,7 +8,7 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id } = event.queryStringParameters || {};
+    const { tenant_id, curso_id } = event.query || {};
 
     if (!token || !tenant_id) {
       return {

@@ -2,6 +2,7 @@ import boto3
 import os
 import json
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -9,10 +10,16 @@ logger.setLevel(logging.INFO)
 dynamodb = boto3.resource('dynamodb')
 TABLE_USER = os.environ['TABLE_USER']
 
+# ✅ Serializador para valores Decimal (de DynamoDB)
+def json_serial(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError(f'Type {type(obj)} not serializable')
+
 def lambda_handler(event, context):
     try:
         # ✅ Obtener parámetros desde query string (GET)
-        query_params = event.get('queryStringParameters') or {}
+        query_params = event.get('query') or {}
 
         tenant_id = query_params.get('tenant_id')
         dni = query_params.get('dni')
@@ -44,7 +51,7 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': json.dumps(response['Item'])
+            'body': json.dumps(response['Item'], default=json_serial)
         }
 
     except Exception as e:

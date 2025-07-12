@@ -38,7 +38,7 @@ def lambda_handler(event, context):
             FunctionName=FUNCION_ORG,
             InvocationType='RequestResponse',
             Payload=json.dumps({
-                'queryStringParameters': {
+                'query': {
                     'tenant_id': tenant_id
                 }
             })

@@ -18,7 +18,7 @@ def lambda_handler(event, context):
         # Obtener tenant_id desde query parameters (GET)
         print("EVENT: ", json.dumps(event))  # O usa logger si prefieres
 
-        tenant_id = event.get('params', {}).get('querystring', {}).get('tenant_id')
+        tenant_id = event.get('query', {}).get('tenant_id')
 
         if not tenant_id:
             return {

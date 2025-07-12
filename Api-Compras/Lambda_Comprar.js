@@ -66,7 +66,7 @@ exports.handler = async (event) => {
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { curso_id, tenant_id }
+        query: { curso_id, tenant_id }
       })
     }).promise();
 
@@ -88,7 +88,7 @@ exports.handler = async (event) => {
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { tenant_id, horario_id }
+        query: { tenant_id, horario_id }
       })
     }).promise();
 

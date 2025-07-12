@@ -13,7 +13,7 @@ exports.handler = async (event) => {
       lastCursoId,
       dni_instructor,
       tenant_id
-    } = event.queryStringParameters || {};
+    } = event.query || {};
 
     if (!token || !tenant_id) {
       return {
