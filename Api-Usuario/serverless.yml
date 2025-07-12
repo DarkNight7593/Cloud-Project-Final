@@ -22,6 +22,7 @@ functions:
           path: /usuario/crear
           method: post
           cors: true
+          integration: lambda
 
   login:
     handler: Lambda_LoginUsuario.lambda_handler
@@ -29,20 +30,8 @@ functions:
       - http:
           path: /usuario/login
           method: post
-          cors:
-            origin: '*'
-            headers:
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-              - X-Amzn-Trace-Id
-            allowCredentials: false
-            methods:
-              - POST
-              - OPTIONS
+          cors: true
+          integration: lambda
 
   logout:
     handler: Lambda_Logout.lambda_handler
@@ -51,6 +40,7 @@ functions:
           path: /usuario/logout
           method: post
           cors: true
+          integration: lambda
 
   validar:
     handler: Lambda_ValidarTokenAcceso.lambda_handler
@@ -59,6 +49,7 @@ functions:
           path: /usuario/validar
           method: post
           cors: true
+          integration: lambda
 
   listar:
     handler: Lambda_ListarUsuario.lambda_handler
@@ -67,6 +58,7 @@ functions:
           path: /usuario/listar
           method: post
           cors: true
+          integration: lambda
 
   buscar:
     handler: Lambda_BuscarUsuario.lambda_handler
@@ -75,6 +67,7 @@ functions:
           path: /usuario/buscar
           method: get
           cors: true
+          integration: lambda
 
   doc:
     handler: Lambda_Doc.lambda_handler

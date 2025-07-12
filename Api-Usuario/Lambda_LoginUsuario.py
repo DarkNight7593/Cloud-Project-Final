@@ -14,12 +14,6 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 # Encabezados CORS comunes
-CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'OPTIONS,POST',
-    'Content-Type': 'application/json'
-}
 
 def lambda_handler(event, context):
     try:
@@ -27,7 +21,6 @@ def lambda_handler(event, context):
         if event.get('httpMethod') == 'OPTIONS':
             return {
                 'statusCode': 200,
-                'headers': CORS_HEADERS,
                 'body': json.dumps({'message': 'Preflight OK'})
             }
 
@@ -44,7 +37,6 @@ def lambda_handler(event, context):
         if not all([tenant_id, dni, password, rol]):
             return {
                 'statusCode': 400,
-                'headers': CORS_HEADERS,
                 'body': json.dumps({'error': 'Faltan tenant_id, dni, password o rol'})
             }
 
@@ -65,7 +57,6 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 403,
-                'headers': CORS_HEADERS,
                 'body': json.dumps({'error': 'Usuario no existe o rol incorrecto'})
             }
 
@@ -73,7 +64,6 @@ def lambda_handler(event, context):
         if usuario['password'] != hashed_password:
             return {
                 'statusCode': 403,
-                'headers': CORS_HEADERS,
                 'body': json.dumps({'error': 'Password incorrecto'})
             }
 
@@ -99,7 +89,6 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'message': 'Login exitoso',
                 'token': token,
@@ -111,7 +100,6 @@ def lambda_handler(event, context):
         logger.warning(f"Campo faltante: {str(e)}")
         return {
             'statusCode': 400,
-            'headers': CORS_HEADERS,
             'body': json.dumps({'error': f'Falta el campo requerido: {str(e)}'})
         }
 
@@ -119,6 +107,5 @@ def lambda_handler(event, context):
         logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
-            'headers': CORS_HEADERS,
             'body': json.dumps({'error': str(e)})
         }
