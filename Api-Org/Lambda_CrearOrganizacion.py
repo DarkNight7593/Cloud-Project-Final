@@ -2,9 +2,12 @@ import boto3
 import os
 import json
 import logging
+import urllib.request
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+FASTAPI_URL = "http://34.233.20.17:8080/crear-tenant"
 
 def lambda_handler(event, context):
     try:
@@ -40,25 +43,62 @@ def lambda_handler(event, context):
                 })
             }
 
-        # Armar el ítem con o sin 'detalle'
+        # Calcular puerto dinámicamente
+        scan_response = t_org.scan(Select='COUNT')
+        cantidad_orgs = scan_response.get('Count', 0)
+        puerto = 9200 + cantidad_orgs
+
+        logger.info(f"Puerto asignado para {tenant_id}: {puerto}")
+
+        # Llamar a la API FastAPI para crear contenedor Elasticsearch
+        data = json.dumps({
+            'tenant_id': tenant_id,
+            'puerto': puerto
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            FASTAPI_URL,
+            data=data,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+
+        try:
+            with urllib.request.urlopen(req) as response:
+                fastapi_resp = response.read().decode('utf-8')
+                logger.info(f"Respuesta de FastAPI: {fastapi_resp}")
+        except urllib.error.HTTPError as e:
+            error_detail = e.read().decode()
+            logger.error(f"Error al crear tenant en FastAPI: {error_detail}")
+            return {
+                'statusCode': e.code,
+                'body': json.dumps({
+                    'error': 'Error al crear contenedor Elasticsearch',
+                    'detalle': error_detail
+                })
+            }
+
+        # Preparar el ítem para DynamoDB
         item = {
             'tenant_id': tenant_id,
             'descripcion': descripcion,
             'correo': correo,
-            'dominio': dominio
+            'dominio': dominio,
+            'puerto': puerto
         }
 
         if detalle is not None:
-            item['detalle'] = detalle  # Puede ser dict o string (según como lo pases)
+            item['detalle'] = detalle
 
-        # Insertar en la tabla
+        # Guardar en DynamoDB
         t_org.put_item(Item=item)
 
         return {
             'statusCode': 200,
             'body': json.dumps({
                 'message': 'Organización registrada exitosamente',
-                'tenant_id': tenant_id
+                'tenant_id': tenant_id,
+                'puerto': puerto
             })
         }
 
