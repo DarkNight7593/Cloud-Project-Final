@@ -16,7 +16,7 @@ def json_serial(obj):
 def lambda_handler(event, context):
     try:
         # Obtener tenant_id desde query parameters (GET)
-        print("EVENT: ", json.dumps(event),default=json_serial)  # O usa logger si prefieres
+        print("EVENT: ", json.dumps(event))  # O usa logger si prefieres
 
         tenant_id = event.get('params', {}).get('querystring', {}).get('tenant_id')
 
