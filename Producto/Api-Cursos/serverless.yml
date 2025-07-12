@@ -23,6 +23,7 @@ functions:
           path: /curso/crear
           method: post
           cors: true
+          integration: lambda
 
   listarCursos:
     handler: Lambda_ListarCursos.handler
@@ -31,6 +32,7 @@ functions:
           path: /curso/listar
           method: get
           cors: true
+          integration: lambda
 
   obtenerCurso:
     handler: Lambda_BuscarCurso.handler
@@ -39,6 +41,7 @@ functions:
           path: /curso/buscar
           method: get
           cors: true
+          integration: lambda
 
   actualizarCurso:
     handler: Lambda_ModiCurso.handler
@@ -47,6 +50,7 @@ functions:
           path: /curso/modificar
           method: put
           cors: true
+          integration: lambda
 
   eliminarCurso:
     handler: Lambda_EliminarCurso.handler
@@ -55,6 +59,7 @@ functions:
           path: /curso/eliminar
           method: delete
           cors: true
+          integration: lambda
 
   doc:
     handler: Lambda_Doc.handler

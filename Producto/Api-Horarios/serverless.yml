@@ -21,6 +21,7 @@ functions:
           path: /horario/crear
           method: post
           cors: true
+          integration: lambda
 
   listarHorario:
     handler: Lambda_ListarHorario.handler
@@ -29,6 +30,7 @@ functions:
           path: /horario/listar
           method: get
           cors: true
+          integration: lambda
 
   obtenerHorario:
     handler: Lambda_BuscarHorario.handler
@@ -37,6 +39,7 @@ functions:
           path: /horario/buscar
           method: get
           cors: true
+          integration: lambda
 
   actualizarHorario:
     handler: Lambda_ModiHorario.handler
@@ -45,6 +48,7 @@ functions:
           path: /horario/modificar
           method: put
           cors: true
+          integration: lambda
 
   eliminarHorario:
     handler: Lambda_EliminarHorario.handler
@@ -53,6 +57,7 @@ functions:
           path: /horario/eliminar
           method: delete
           cors: true
+          integration: lambda
 
   doc:
     handler: Lambda_Doc.handler

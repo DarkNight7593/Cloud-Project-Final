@@ -22,6 +22,7 @@ functions:
           path: compra/comprar
           method: post
           cors: true
+          integration: lambda
 
   listarCompras:
     handler: Lambda_ListarCompras.handler
@@ -30,6 +31,7 @@ functions:
           path: compra/listar
           method: get
           cors: true
+          integration: lambda
 
   eliminarCompra:
     handler: Lambda_EliminarCompra.handler
@@ -38,6 +40,7 @@ functions:
           path: compra/eliminar
           method: delete
           cors: true
+          integration: lambda
 
   doc:
     handler: Lambda_Doc.handler

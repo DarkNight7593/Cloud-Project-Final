@@ -19,7 +19,6 @@ def lambda_handler(event, context):
         if not tenant_id or not token:
             return {
                 'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({'error': 'Se requieren tenant_id y token'})
             }
 
@@ -38,7 +37,6 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'message': 'Logout exitoso'})
         }
 
@@ -46,6 +44,5 @@ def lambda_handler(event, context):
         logger.error("Error inesperado en logout", exc_info=True)
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'error': str(e)})
         }

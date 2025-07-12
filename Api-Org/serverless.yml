@@ -20,6 +20,7 @@ functions:
           path: /org/crear
           method: post
           cors: true
+          integration: lambda
 
   listarorg:
     handler: Lambda_ListarOrg.lambda_handler
@@ -28,6 +29,7 @@ functions:
           path: /org/listar
           method: get
           cors: true
+          integration: lambda
 
   buscarorg:
     handler: Lambda_BuscarOrg.lambda_handler
@@ -36,6 +38,7 @@ functions:
           path: /org/buscar
           method: get
           cors: true
+          integration: lambda
 
   modificarorg:
     handler: Lambda_ModiOrg.lambda_handler
@@ -44,6 +47,7 @@ functions:
           path: /org/modi
           method: put
           cors: true
+          integration: lambda
   doc:
     handler: Lambda_Doc.lambda_handler
     events:

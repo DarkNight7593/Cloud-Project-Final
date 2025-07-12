@@ -22,7 +22,6 @@ def lambda_handler(event, context):
         if not all([tenant_id, dni, rol]):
             return {
                 'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({'error': 'Faltan tenant_id, dni o rol en la URL'})
             }
 
@@ -40,13 +39,11 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 404,
-                'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({'error': 'Usuario no encontrado'})
             }
 
         return {
             'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps(response['Item'])
         }
 
@@ -54,6 +51,5 @@ def lambda_handler(event, context):
         logger.exception("Error inesperado en buscar_usuario")
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'error': 'Error interno', 'detalle': str(e)})
         }
