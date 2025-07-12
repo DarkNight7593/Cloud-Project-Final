@@ -80,6 +80,8 @@ resources:
           - AttributeName: curso_id
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
         GlobalSecondaryIndexes:
           - IndexName: tenant_curso_index
             KeySchema:
@@ -89,3 +91,13 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
+Outputs:
+  TablaComprasStreamArn:
+    Description: ARN del Stream de la tabla de compras
+    Value:
+      Fn::GetAtt:
+        - TablaCompras
+        - StreamArn
+    Export:
+      Name: ${self:service}-${sls:stage}-CompraStreamArn
