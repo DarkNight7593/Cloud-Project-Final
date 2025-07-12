@@ -1,10 +1,8 @@
 import boto3
 import hashlib
-import uuid
-import os
 import json
+import os
 import logging
-from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -12,86 +10,134 @@ logger.setLevel(logging.INFO)
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Header CORS común
-
-
 def lambda_handler(event, context):
     try:
-        # Manejo de preflight OPTIONS
-        if event.get('httpMethod') == 'OPTIONS':
-            return {
-                'statusCode': 200,
-                'body': json.dumps({'message': 'Preflight OK'})
-            }
 
         if isinstance(event['body'], str):
             event['body'] = json.loads(event['body'])
 
         body = event['body']
-        tenant_id = body.get('tenant_id')
-        dni = body.get('dni')
-        password = body.get('password')
-        rol = body.get('rol', '').lower()
+        tenant_id = body['tenant_id']
+        dni = body['dni']
+        full_name = body['full_name']
+        password = body['password']
+        rol = body['rol'].lower()
+        detalles = body.get('detalles')  # 👈 campo opcional
 
-        if not all([tenant_id, dni, password, rol]):
+        if not all([tenant_id, dni, full_name, password, rol]):
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'Faltan tenant_id, dni, password o rol'})
+                'body': json.dumps({'error': 'Faltan tenant_id, dni, full_name, password o rol'})
             }
 
-        tenant_id_rol = f"{tenant_id}#{rol}"
-        hashed_password = hash_password(password)
+        # 🔍 1️⃣ Validar tenant usando Lambda externo
+        lambda_client = boto3.client('lambda')
+        FUNCION_ORG = os.environ['FUNCION_ORG']
 
+        buscar_org_resp = lambda_client.invoke(
+            FunctionName=FUNCION_ORG,
+            InvocationType='RequestResponse',
+            Payload=json.dumps({
+                'queryStringParameters': {
+                    'tenant_id': tenant_id
+                }
+            })
+        )
+
+        buscar_org_payload = json.loads(buscar_org_resp['Payload'].read())
+        if buscar_org_payload.get('statusCode') != 200:
+            return {
+                'statusCode': 404,
+                'body': json.dumps({'error': f'Tenant "{tenant_id}" no está registrado'})
+            }
+
+        # ⚙️ Preparar tabla de usuarios
         dynamodb = boto3.resource('dynamodb')
-        t_usuarios = dynamodb.Table(os.environ["TABLE_USER"])
-        t_tokens = dynamodb.Table(os.environ["TABLE_TOKEN"])
+        tabla_usuarios = dynamodb.Table(os.environ["TABLE_USER"])
+        tenant_id_rol = f"{tenant_id}#{rol}"
 
-        response = t_usuarios.get_item(
-            Key={
-                'tenant_id_rol': tenant_id_rol,
-                'dni': dni
-            }
-        )
 
-        if 'Item' not in response:
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'Usuario no existe o rol incorrecto'})
-            }
 
-        usuario = response['Item']
-        if usuario['password'] != hashed_password:
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'Password incorrecto'})
-            }
 
-        token = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        expiracion = now + timedelta(hours=1)
-        expiracion_str = expiracion.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # 🚫 2️⃣ Validar que solo exista un admin por tenant
+        if rol == "admin":
+            resp = tabla_usuarios.query(
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('tenant_id_rol').eq(tenant_id_rol),
+                Limit=1
+            )
+            if resp.get('Items'):
+                return {
+                    'statusCode': 409,
+                    'body': json.dumps({'error': 'Ya existe un administrador registrado para este tenant'})
+                }
 
-        full_name = usuario.get('full_name', '')
+        # ✅ 3️⃣ Validar token si se intenta crear un instructor
+        if rol == "instructor":
+            token = event.get('headers', {}).get('Authorization')
+            if not token:
+                return {
+                    'statusCode': 404,
+                    'body': json.dumps({'error': 'Token requerido para crear un instructor'})
+                }
 
-        t_tokens.put_item(
-            Item={
-                'tenant_id': tenant_id,
-                'token': token,
-                'dni': dni,
-                'full_name': full_name,
-                'rol': rol,
-                'expires_at': expiracion_str
-            }
-        )
+            FUNCION_VALIDAR = os.environ['FUNCION_VALIDAR']
+            validacion = lambda_client.invoke(
+                FunctionName=FUNCION_VALIDAR,
+                InvocationType='RequestResponse',
+                Payload=json.dumps({
+                    'body': {
+                        'token': token,
+                        'tenant_id': tenant_id
+                    }
+                })
+            )
+            payload = json.loads(validacion['Payload'].read())
+            if payload.get('statusCode') != 200:
+                return {
+                    'statusCode': 403,
+                    'body': json.dumps({'error': 'Token inválido o expirado'})
+                }
 
-        logger.info(f"Login exitoso para {dni} en {tenant_id} con rol {rol}")
+            usuario_autenticado = json.loads(payload['body']) if isinstance(payload['body'], str) else payload['body']
+            if usuario_autenticado.get('rol') != 'admin':
+                return {
+                    'statusCode': 401,
+                    'body': json.dumps({'error': 'Solo administradores pueden crear instructores'})
+                }
+
+        # 📝 4️⃣ Registrar usuario
+        hashed_password = hash_password(password)
+        item = {
+            'tenant_id_rol': tenant_id_rol,
+            'dni': dni,
+            'full_name': full_name,
+            'rol': rol,
+            'password': hashed_password
+        }
+
+        # ➕ Agregar campo opcional detalles si está presente y es un objeto
+        if detalles is not None:
+            if not isinstance(detalles, dict):
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({'error': 'El campo "detalles" debe ser un objeto JSON'})
+                }
+            item['detalles'] = detalles
+
+
+
+
+        tabla_usuarios.put_item(Item=item)
+        logger.info(f"Usuario registrado: {dni} ({rol}) en {tenant_id}")
 
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'Login exitoso',
-                'token': token,
-                'expires_at': expiracion_str
+                'message': 'Usuario registrado exitosamente',
+                'dni': dni,
+                'full_name': full_name,
+                'rol': rol,
+                'detalles': detalles if detalles else {}
             })
         }
 
@@ -99,13 +145,16 @@ def lambda_handler(event, context):
         logger.warning(f"Campo faltante: {str(e)}")
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f'Falta el campo requerido: {str(e)}'})
+            'body': json.dumps({'error': f"Falta el campo requerido: {str(e)}"})
         }
 
     except Exception as e:
         logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
-        }
 
+            'body': json.dumps({
+                'error': 'Error interno del servidor',
+                'detalle': str(e)
+            })
+        }
