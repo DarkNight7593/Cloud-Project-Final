@@ -138,6 +138,7 @@ exports.handler = async (event) => {
         alumno_nombre: full_name,
         estado,
         horario_id,
+        precio:curso.precio,
         instructor_dni: curso.instructor_dni,
         instructor_nombre: curso.instructor_nombre,
         curso_nombre: curso.nombre,
