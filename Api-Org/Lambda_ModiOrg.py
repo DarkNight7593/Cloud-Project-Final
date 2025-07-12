@@ -2,9 +2,16 @@ import boto3
 import os
 import json
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Para convertir Decimals en float/int cuando se hace json.dumps
+def json_serial(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 def lambda_handler(event, context):
     try:
@@ -50,7 +57,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Solo un administrador puede modificar la organización'})
             }
 
-        # Verificar si existe
+        # Verificar si existe la organización
         dynamodb = boto3.resource('dynamodb')
         tabla = dynamodb.Table(os.environ["TABLE_ORG"])
 
@@ -71,7 +78,7 @@ def lambda_handler(event, context):
         for campo in campos_permitidos:
             if campo in body:
                 placeholder = f":val_{campo}"
-                if campo in ['dominio']:  # en caso de conflicto con palabras reservadas
+                if campo in ['dominio']:  # evitar palabras reservadas
                     expr_names[f"#{campo}"] = campo
                     update_expr.append(f"#{campo} = {placeholder}")
                 else:
@@ -105,7 +112,7 @@ def lambda_handler(event, context):
                 'message': 'Organización actualizada correctamente',
                 'tenant_id': tenant_id,
                 'actualizados': actualizados
-            })
+            }, default=json_serial)
         }
 
     except KeyError as e:
@@ -120,5 +127,5 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'error': 'Error interno del servidor',
                 'detalle': str(e)
-            })
+            }, default=json_serial)
         }

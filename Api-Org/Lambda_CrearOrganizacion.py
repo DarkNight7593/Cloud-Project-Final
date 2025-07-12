@@ -3,11 +3,17 @@ import os
 import json
 import logging
 import urllib.request
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 FASTAPI_URL = "http://34.233.20.17:8080/crear-tenant"
+
+def json_serial(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 def lambda_handler(event, context):
     try:
@@ -43,42 +49,14 @@ def lambda_handler(event, context):
                 })
             }
 
-        # Calcular puerto dinámicamente
+        # Calcular puerto dinámico
         scan_response = t_org.scan(Select='COUNT')
         cantidad_orgs = scan_response.get('Count', 0)
-        puerto = 9200 + cantidad_orgs
+        puerto = 9200 + int(cantidad_orgs)
 
         logger.info(f"Puerto asignado para {tenant_id}: {puerto}")
-
-        # Llamar a la API FastAPI para crear contenedor Elasticsearch
-        data = json.dumps({
-            'tenant_id': tenant_id,
-            'puerto': puerto
-        }).encode('utf-8')
-
-        req = urllib.request.Request(
-            FASTAPI_URL,
-            data=data,
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
-
-        try:
-            with urllib.request.urlopen(req) as response:
-                fastapi_resp = response.read().decode('utf-8')
-                logger.info(f"Respuesta de FastAPI: {fastapi_resp}")
-        except urllib.error.HTTPError as e:
-            error_detail = e.read().decode()
-            logger.error(f"Error al crear tenant en FastAPI: {error_detail}")
-            return {
-                'statusCode': e.code,
-                'body': json.dumps({
-                    'error': 'Error al crear contenedor Elasticsearch',
-                    'detalle': error_detail
-                })
-            }
-
-        # Preparar el ítem para DynamoDB
+        
+        # Crear item para DynamoDB
         item = {
             'tenant_id': tenant_id,
             'descripcion': descripcion,
@@ -99,7 +77,7 @@ def lambda_handler(event, context):
                 'message': 'Organización registrada exitosamente',
                 'tenant_id': tenant_id,
                 'puerto': puerto
-            })
+            }, default=json_serial)
         }
 
     except KeyError as e:
@@ -117,5 +95,6 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'error': 'Error interno del servidor',
                 'detalle': str(e)
-            })
+            }, default=json_serial)
         }
+

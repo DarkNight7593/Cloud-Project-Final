@@ -2,9 +2,16 @@ import boto3
 import os
 import json
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Función auxiliar para convertir Decimal a int o float
+def json_serial(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError(f'Type {type(obj)} not serializable')
 
 def lambda_handler(event, context):
     try:
@@ -39,7 +46,7 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': json.dumps(response['Item'])
+            'body': json.dumps(response['Item'], default=json_serial)
         }
 
     except Exception as e:
@@ -51,3 +58,4 @@ def lambda_handler(event, context):
                 'detalle': str(e)
             })
         }
+
