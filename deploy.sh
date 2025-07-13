@@ -17,6 +17,7 @@ cd ..
 # Deploy Api-Org
 echo -e "${GREEN}2. Desplegando Api-Org...${NC}"
 cd Api-Org
+pip install requests -t .
 sls deploy
 cd ..
 
