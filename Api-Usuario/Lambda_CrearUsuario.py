@@ -32,7 +32,7 @@ def lambda_handler(event, context):
         lambda_client = boto3.client('lambda')
         FUNCION_ORG = os.environ['FUNCION_ORG']
 
-        # ✅ Invocar Lambda FUNCION_ORG con integration tipo lambda (query como objeto)
+        # ✅ Verificar que la organización exista
         buscar_org_resp = lambda_client.invoke(
             FunctionName=FUNCION_ORG,
             InvocationType='RequestResponse',
@@ -51,7 +51,19 @@ def lambda_handler(event, context):
         tabla_usuarios = boto3.resource('dynamodb').Table(os.environ["TABLE_USER"])
         tenant_id_rol = f"{tenant_id}#{rol}"
 
-        # Validar que solo haya un admin por tenant
+        # ✅ Verificar si ya existe el usuario
+        existe = tabla_usuarios.get_item(
+            Key={'tenant_id_rol': tenant_id_rol, 'dni': dni}
+        )
+        if 'Item' in existe:
+            return {
+                'statusCode': 409,
+                'body': {
+                    'error': f'Ya existe un usuario con dni {dni} registrado como {rol} en este tenant'
+                }
+            }
+
+        # ✅ Validar que solo haya un admin por tenant
         if rol == "admin":
             resp = tabla_usuarios.query(
                 KeyConditionExpression=boto3.dynamodb.conditions.Key('tenant_id_rol').eq(tenant_id_rol),
@@ -63,7 +75,7 @@ def lambda_handler(event, context):
                     'body': {'error': 'Ya existe un administrador registrado para este tenant'}
                 }
 
-        # Validar token si se crea un instructor
+        # ✅ Validar token si se crea un instructor
         if rol == "instructor":
             token = event.get('headers', {}).get('Authorization')
             if not token:
@@ -98,7 +110,7 @@ def lambda_handler(event, context):
                     'body': {'error': 'Solo administradores pueden crear instructores'}
                 }
 
-        # Registrar usuario
+        # ✅ Registrar usuario
         hashed_password = hash_password(password)
         item = {
             'tenant_id_rol': tenant_id_rol,
