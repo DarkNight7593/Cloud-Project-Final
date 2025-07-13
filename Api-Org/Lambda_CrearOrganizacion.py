@@ -2,6 +2,7 @@ import boto3
 import os
 import json
 import logging
+import requests
 from decimal import Decimal
 
 logger = logging.getLogger()
@@ -69,6 +70,26 @@ def lambda_handler(event, context):
             item['detalle'] = detalle
 
         t_org.put_item(Item=item)
+
+        # 🟢 Llamar a FastAPI para crear contenedor e índice
+        fastapi_response = requests.post(
+            FASTAPI_URL,
+            json={
+                "tenant": tenant_id,
+                "puerto": puerto
+            },
+            timeout=10
+        )
+
+        if fastapi_response.status_code != 200:
+            logger.error(f"FastAPI error: {fastapi_response.text}")
+            return {
+                'statusCode': 500,
+                'body':{
+                    'error': 'Error al crear el contenedor Elasticsearch',
+                    'detalle': fastapi_response.text
+                }
+            }
 
         return {
             'statusCode': 200,
