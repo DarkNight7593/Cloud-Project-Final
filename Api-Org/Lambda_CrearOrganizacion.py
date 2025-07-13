@@ -28,7 +28,6 @@ def lambda_handler(event, context):
         correo = body.get('correo')
         detalle = body.get('detalle')  # opcional
 
-        # Validación básica
         if not all([tenant_id, dominio, descripcion, correo]):
             return {
                 'statusCode': 400,
@@ -51,14 +50,14 @@ def lambda_handler(event, context):
                 }
             }
 
-        # Asignar puerto
+        # Asignar puerto dinámicamente
         scan_response = t_org.scan(Select='COUNT')
         cantidad_orgs = scan_response.get('Count', 0)
         puerto = 9200 + int(cantidad_orgs)
 
         logger.info(f"Puerto asignado para {tenant_id}: {puerto}")
 
-        # Crear item y guardar
+        # Crear item en DynamoDB
         item = {
             'tenant_id': tenant_id,
             'descripcion': descripcion,
@@ -71,30 +70,26 @@ def lambda_handler(event, context):
 
         t_org.put_item(Item=item)
 
-        # 🟢 Llamar a FastAPI para crear contenedor e índice
-        fastapi_response = requests.post(
-            FASTAPI_URL,
-            json={
-                "tenant": tenant_id,
-                "puerto": puerto
-            },
-            timeout=10
-        )
+        # 🔄 Intentar llamada a FastAPI
+        try:
+            fastapi_response = requests.post(
+                FASTAPI_URL,
+                json={ "tenant": tenant_id, "puerto": puerto },
+                timeout=10  # solo para detectar errores inmediatos
+            )
 
-        if fastapi_response.status_code != 200:
-            logger.error(f"FastAPI error: {fastapi_response.text}")
-            return {
-                'statusCode': 500,
-                'body':{
-                    'error': 'Error al crear el contenedor Elasticsearch',
-                    'detalle': fastapi_response.text
-                }
-            }
+            if fastapi_response.status_code not in [200]:
+                logger.warning(f"FastAPI respondió con código inesperado: {fastapi_response.status_code}")
+                logger.warning(f"Respuesta: {fastapi_response.text}")
+                # pero no fallamos; asumimos que se levantará más adelante
+        except requests.exceptions.RequestException as fastapi_err:
+            logger.warning(f"No se obtuvo respuesta inmediata de FastAPI: {fastapi_err}")
+            # asumimos que sigue ejecutándose o se levantará luego
 
         return {
             'statusCode': 200,
             'body': {
-                'message': 'Organización registrada exitosamente',
+                'message': 'Organización registrada (FastAPI puede tardar en completar)',
                 'tenant_id': tenant_id,
                 'puerto': puerto
             }
