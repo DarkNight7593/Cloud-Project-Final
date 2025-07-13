@@ -18,7 +18,7 @@ exports.handler = async (event) => {
     if (!token || !tenant_id) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+        body: { error: 'Token o tenant_id no proporcionado' }
       };
     }
 
@@ -34,13 +34,13 @@ exports.handler = async (event) => {
     if (validarPayload.statusCode !== 200) {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error al validar token';
-      try {
-        const parsedBody = JSON.parse(validarPayload.body);
-        errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {}
+      const parsedBody = typeof validarPayload.body === 'string'
+        ? JSON.parse(validarPayload.body)
+        : validarPayload.body;
+      errorMessage = parsedBody.error || errorMessage;
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
@@ -51,7 +51,6 @@ exports.handler = async (event) => {
     if (dni_instructor) {
       const tenantInstructor = `${tenant_id}#${dni_instructor}`;
 
-      // KeyCondition con curso_id > :lastCursoId
       let keyCondition = 'tenant_instructor = :tenantInstructor';
       let expressionValues = { ':tenantInstructor': tenantInstructor };
 
@@ -91,7 +90,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         cursos: result.Items,
         paginacion: {
           ultimoCursoId: result.Items.length > 0
@@ -99,20 +98,17 @@ exports.handler = async (event) => {
             : null,
           total: result.Items.length
         }
-      })
+      }
     };
 
   } catch (error) {
     console.error("Error al listar cursos:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: error.message
-      })
+      }
     };
   }
 };
-
-
-

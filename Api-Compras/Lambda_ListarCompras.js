@@ -15,12 +15,12 @@ exports.handler = async (event) => {
       limit = 10,
       lastCursoId,
       lastAlumnoDni
-    } = event.queryStringParameters || {};
+    } = event.query || {};
 
-    if (!token || !tenant_id ) {
+    if (!token || !tenant_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Se requieren token, tenant_id y curso_id' })
+        body: { error: 'Se requieren token y tenant_id' }
       };
     }
 
@@ -34,15 +34,14 @@ exports.handler = async (event) => {
     const validarPayload = JSON.parse(validar.Payload);
 
     if (validarPayload.statusCode !== 200) {
-      let statusCode = validarPayload.statusCode;
-      let errorMessage = 'Error desconocido al validar token';
+      let errorMessage = 'Error al validar token';
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
-        errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {}
+        const parsed = JSON.parse(validarPayload.body);
+        errorMessage = parsed.error || errorMessage;
+      } catch {}
       return {
-        statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        statusCode: validarPayload.statusCode,
+        body: { error: errorMessage }
       };
     }
 
@@ -50,8 +49,7 @@ exports.handler = async (event) => {
       ? JSON.parse(validarPayload.body)
       : validarPayload.body;
 
-    const rol = usuario.rol;
-    const dni = usuario.dni;
+    const { rol, dni } = usuario;
     const parsedLimit = parseInt(limit);
 
     // === ALUMNO ===
@@ -59,7 +57,7 @@ exports.handler = async (event) => {
       if (!estado || !['reservado', 'inscrito'].includes(estado)) {
         return {
           statusCode: 400,
-          body: JSON.stringify({ error: 'Estado requerido o inválido' })
+          body: { error: 'Estado requerido o inválido' }
         };
       }
 
@@ -81,7 +79,7 @@ exports.handler = async (event) => {
 
       return {
         statusCode: 200,
-        body: JSON.stringify({
+        body: {
           compras: result.Items,
           paginacion: {
             ultimoCursoId: result.Items.length > 0
@@ -89,18 +87,19 @@ exports.handler = async (event) => {
               : null,
             total: result.Items.length
           }
-        })
+        }
       };
     }
 
     // === INSTRUCTOR o ADMIN ===
     if (rol === 'instructor' || rol === 'admin') {
       if (!curso_id) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Se requiere curso_id' })
-      };
+        return {
+          statusCode: 400,
+          body: { error: 'Se requiere curso_id' }
+        };
       }
+
       const partitionKey = `${tenant_id}#${curso_id}`;
       let keyCondition = 'tenant_id_curso_id = :pk';
       const expressionValues = { ':pk': partitionKey };
@@ -120,7 +119,7 @@ exports.handler = async (event) => {
 
       return {
         statusCode: 200,
-        body: JSON.stringify({
+        body: {
           compras: result.Items,
           paginacion: {
             ultimoAlumnoDni: result.Items.length > 0
@@ -128,23 +127,20 @@ exports.handler = async (event) => {
               : null,
             total: result.Items.length
           }
-        })
+        }
       };
     }
 
     return {
-      statusCode: 404,
-      body: JSON.stringify({ error: 'Rol no autorizado' })
+      statusCode: 403,
+      body: { error: 'Rol no autorizado' }
     };
 
   } catch (error) {
     console.error('Error en listar compras:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error interno', detalle: error.message })
+      body: { error: 'Error interno', detalle: error.message }
     };
   }
 };
-
-
-

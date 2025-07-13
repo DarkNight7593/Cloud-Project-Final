@@ -13,11 +13,11 @@ exports.handler = async (event) => {
     if (!token || !tenant_id) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: 'Token y tenant_id son requeridos' })
+        body: { error: 'Token y tenant_id son requeridos' }
       };
     }
 
-    // Validar token con lambda externa
+    // Validar token con Lambda externa
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
@@ -37,19 +37,18 @@ exports.handler = async (event) => {
       try {
         const parsedBody = JSON.parse(validarPayload.body);
         errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
+      } catch (_) {}
 
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
     if (!curso_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'curso_id requerido' })
+        body: { error: 'curso_id requerido' }
       };
     }
 
@@ -61,21 +60,20 @@ exports.handler = async (event) => {
     if (!result.Item) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Curso no encontrado' })
+        body: { error: 'Curso no encontrado' }
       };
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify(result.Item)
+      body: result.Item
     };
 
   } catch (error) {
     console.error('Error en buscarCurso:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: { error: error.message }
     };
   }
 };
-

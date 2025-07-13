@@ -11,15 +11,38 @@ exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
     let body = event.body;
-    if (typeof body === 'string') {
-    body = JSON.parse(body);
+
+    if (!body) {
+      return {
+        statusCode: 400,
+        body: { error: 'Falta el body en la solicitud' }
+      };
     }
+
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (err) {
+        return {
+          statusCode: 400,
+          body: { error: 'El body no es un JSON válido' }
+        };
+      }
+    }
+
     const { tenant_id, curso_id, horario_id, estado } = body || {};
 
     if (!token || !tenant_id) {
       return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+        statusCode: 400,
+        body: { error: 'Token o tenant_id no proporcionado' }
+      };
+    }
+
+    if (!curso_id || !horario_id || !estado || !['reservado', 'inscrito'].includes(estado)) {
+      return {
+        statusCode: 400,
+        body: { error: 'Faltan datos requeridos o estado inválido' }
       };
     }
 
@@ -32,13 +55,17 @@ exports.handler = async (event) => {
 
     const validarPayload = JSON.parse(validar.Payload);
     if (validarPayload.statusCode !== 200) {
-      let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error al validar token';
       try {
-        const parsed = JSON.parse(validarPayload.body);
+        const parsed = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsed.error || errorMessage;
       } catch {}
-      return { statusCode, body: JSON.stringify({ error: errorMessage }) };
+      return {
+        statusCode: validarPayload.statusCode,
+        body: { error: errorMessage }
+      };
     }
 
     const usuario = typeof validarPayload.body === 'string'
@@ -46,17 +73,11 @@ exports.handler = async (event) => {
       : validarPayload.body;
 
     const { rol, dni, full_name } = usuario;
+
     if (rol !== 'alumno') {
       return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Solo los alumnos pueden registrar compras' })
-      };
-    }
-
-    if (!curso_id || !horario_id || !estado || !['reservado', 'inscrito'].includes(estado)) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan datos o estado inválido' })
+        statusCode: 403,
+        body: { error: 'Solo los alumnos pueden registrar compras' }
       };
     }
 
@@ -74,7 +95,7 @@ exports.handler = async (event) => {
     if (cursoPayload.statusCode !== 200) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Curso no encontrado' })
+        body: { error: 'Curso no encontrado' }
       };
     }
 
@@ -96,7 +117,7 @@ exports.handler = async (event) => {
     if (horarioPayload.statusCode !== 200) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Horario no encontrado' })
+        body: { error: 'Horario no encontrado' }
       };
     }
 
@@ -104,7 +125,7 @@ exports.handler = async (event) => {
       ? JSON.parse(horarioPayload.body)
       : horarioPayload.body;
 
-    // 4. Buscar compra existente por alumno en este curso
+    // 4. Verificar si ya existe compra en ese estado
     const pk = `${tenant_id}#${dni}#${estado}`;
     const compraExistente = await dynamodb.get({
       TableName: TABLE_COMPRAS,
@@ -114,11 +135,11 @@ exports.handler = async (event) => {
     if (compraExistente.Item) {
       return {
         statusCode: 409,
-        body: JSON.stringify({ error: `Ya has ${estado === 'inscrito' ? 'inscrito' : 'reservado'} este curso` })
+        body: { error: `Ya tienes este curso como ${estado}` }
       };
     }
 
-    // Si ya había reservado y ahora desea inscribirse, eliminar la reserva
+    // 5. Eliminar reserva previa si va a inscribirse
     if (estado === 'inscrito') {
       const pkReservado = `${tenant_id}#${dni}#reservado`;
       await dynamodb.delete({
@@ -127,7 +148,7 @@ exports.handler = async (event) => {
       }).promise();
     }
 
-    // 5. Registrar la nueva compra
+    // 6. Registrar nueva compra
     await dynamodb.put({
       TableName: TABLE_COMPRAS,
       Item: {
@@ -138,27 +159,26 @@ exports.handler = async (event) => {
         alumno_nombre: full_name,
         estado,
         horario_id,
-        precio:curso.precio,
+        precio: curso.precio,
         instructor_dni: curso.instructor_dni,
         instructor_nombre: curso.instructor_nombre,
         curso_nombre: curso.nombre,
         dias: horario.dias,
         inicio_hora: horario.inicio_hora,
-        fin_hora: horario.fin_hora,
+        fin_hora: horario.fin_hora
       }
     }).promise();
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: `Curso ${estado} exitosamente` })
+      body: { message: `Curso ${estado} exitosamente` }
     };
 
   } catch (error) {
     console.error('Error en Lambda registrarCompra:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error interno', detalle: error.message })
+      body: { error: 'Error interno', detalle: error.message }
     };
   }
 };
-

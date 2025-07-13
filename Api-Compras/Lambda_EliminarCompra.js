@@ -8,12 +8,32 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id } = JSON.parse(event.body || '{}');
+    let body = event.body;
+
+    if (!body) {
+      return {
+        statusCode: 400,
+        body: { error: 'Falta el body en la solicitud' }
+      };
+    }
+
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        return {
+          statusCode: 400,
+          body: { error: 'El body no es un JSON válido' }
+        };
+      }
+    }
+
+    const { tenant_id, curso_id } = body;
 
     if (!token || !tenant_id || !curso_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan campos: token, tenant_id o curso_id' })
+        body: { error: 'Faltan campos: token, tenant_id o curso_id' }
       };
     }
 
@@ -30,10 +50,10 @@ exports.handler = async (event) => {
       try {
         const parsed = JSON.parse(validarPayload.body);
         errorMessage = parsed.error || errorMessage;
-      } catch (_) {}
+      } catch {}
       return {
         statusCode: validarPayload.statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
@@ -46,7 +66,7 @@ exports.handler = async (event) => {
     if (rol !== 'alumno') {
       return {
         statusCode: 403,
-        body: JSON.stringify({ error: 'Solo alumnos pueden eliminar sus compras' })
+        body: { error: 'Solo alumnos pueden eliminar sus compras' }
       };
     }
 
@@ -66,7 +86,7 @@ exports.handler = async (event) => {
     if (!result.Items || result.Items.length === 0) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'No se encontró ninguna compra activa para este curso' })
+        body: { error: 'No se encontró ninguna compra activa para este curso' }
       };
     }
 
@@ -76,7 +96,7 @@ exports.handler = async (event) => {
     if (!compra) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'No se encontró compra con estado válido (inscrito o reservado)' })
+        body: { error: 'No se encontró compra con estado válido (inscrito o reservado)' }
       };
     }
 
@@ -95,17 +115,17 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: mensaje })
+      body: { message: mensaje }
     };
 
   } catch (error) {
     console.error('Error al eliminar compra:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: error.message
-      })
+      }
     };
   }
 };

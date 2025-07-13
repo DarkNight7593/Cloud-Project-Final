@@ -16,13 +16,18 @@ function horariosChocan(i1, f1, i2, f2) {
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const body = JSON.parse(event.body);
+    let body = event.body;
+
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+
     const { tenant_id, horario_id } = body;
 
     if (!token || !tenant_id || !horario_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan token, tenant_id o horario_id' })
+        body: { error: 'Faltan token, tenant_id o horario_id' }
       };
     }
 
@@ -38,12 +43,14 @@ exports.handler = async (event) => {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error al validar token';
       try {
-        const parsed = JSON.parse(validarPayload.body);
+        const parsed = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsed.error || errorMessage;
       } catch (_) {}
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
@@ -62,7 +69,7 @@ exports.handler = async (event) => {
     if (!result.Items || result.Items.length === 0) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'El horario no existe' })
+        body: { error: 'El horario no existe' }
       };
     }
 
@@ -92,11 +99,11 @@ exports.handler = async (event) => {
     if (hayChoque) {
       return {
         statusCode: 409,
-        body: JSON.stringify({ error: 'Existe choque de horario en al menos un día' })
+        body: { error: 'Existe choque de horario en al menos un día' }
       };
     }
 
-    // Actualizar horario con los nuevos o antiguos valores
+    // Actualizar el horario
     const item = {
       tenant_id,
       tenant_id_curso_id,
@@ -113,20 +120,20 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         message: 'Horario actualizado exitosamente',
         horario_id,
         dias,
         inicio_hora,
         fin_hora
-      })
+      }
     };
 
   } catch (e) {
     console.error('Error al modificar horario:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error interno del servidor', detalle: e.message })
+      body: { error: 'Error interno del servidor', detalle: e.message }
     };
   }
 };

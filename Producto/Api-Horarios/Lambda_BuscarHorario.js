@@ -14,14 +14,14 @@ exports.handler = async (event) => {
     if (!token || !tenant_id) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+        body: { error: 'Token o tenant_id no proporcionado' }
       };
     }
 
     if (!horario_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'horario_id es requeridos' })
+        body: { error: 'horario_id es requerido' }
       };
     }
 
@@ -33,53 +33,53 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    
+
     if (validarPayload.statusCode !== 200) {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error desconocido al validar token';
 
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
+        const parsedBody = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
+      } catch (_) {}
 
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
     // Obtener el horario por índice secundario
     const result = await dynamodb.query({
-    TableName: TABLE_HORARIO,
-    IndexName: 'tenant_horario_index',
-    KeyConditionExpression: 'tenant_id = :tenant AND horario_id = :horario',
-    ExpressionAttributeValues: {
-      ':tenant': tenant_id,
-      ':horario': horario_id
-    },
-    Limit: 1
+      TableName: TABLE_HORARIO,
+      IndexName: 'tenant_horario_index',
+      KeyConditionExpression: 'tenant_id = :tenant AND horario_id = :horario',
+      ExpressionAttributeValues: {
+        ':tenant': tenant_id,
+        ':horario': horario_id
+      },
+      Limit: 1
     }).promise();
 
-  if (!result.Items || result.Items.length === 0) {
-    return {
-      statusCode: 404,
-      body: JSON.stringify({ error: 'Horario no encontrado' })
-    };
-  }
+    if (!result.Items || result.Items.length === 0) {
+      return {
+        statusCode: 404,
+        body: { error: 'Horario no encontrado' }
+      };
+    }
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify(result.Items[0])
-  };
+    return {
+      statusCode: 200,
+      body: result.Items[0]
+    };
 
   } catch (e) {
     console.error('Error al obtener el horario:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error interno del servidor', detalle: e.message })
+      body: { error: 'Error interno del servidor', detalle: e.message }
     };
   }
 };
-

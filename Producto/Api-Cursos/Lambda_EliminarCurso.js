@@ -12,18 +12,18 @@ exports.handler = async (event) => {
     const token = event.headers?.Authorization;
     let body = event.body;
     if (typeof body === 'string') {
-    body = JSON.parse(body);
+      body = JSON.parse(body);
     }
     const { curso_id, tenant_id } = body || {};
 
     if (!token || !tenant_id || !curso_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Se requieren token, tenant_id y curso_id' })
+        body: { error: 'Se requieren token, tenant_id y curso_id' }
       };
     }
 
-    // Validar token
+    // Validar token (sin stringify)
     const validar = await lambda.invoke({
       FunctionName: FUNCION_VALIDAR,
       InvocationType: 'RequestResponse',
@@ -33,20 +33,20 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    
+
     if (validarPayload.statusCode !== 200) {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error desconocido al validar token';
 
-      try {
-        const parsedBody = JSON.parse(validarPayload.body);
-        errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
+      const parsedBody = typeof validarPayload.body === 'string'
+        ? JSON.parse(validarPayload.body)
+        : validarPayload.body;
+
+      errorMessage = parsedBody.error || errorMessage;
 
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
@@ -56,7 +56,7 @@ exports.handler = async (event) => {
 
     const { rol, dni } = usuario;
 
-    // Obtener el curso para verificar si el usuario es el instructor creador
+    // Verificar si el curso existe
     const curso = await dynamodb.get({
       TableName: TABLE_CURSO,
       Key: { tenant_id, curso_id }
@@ -65,21 +65,20 @@ exports.handler = async (event) => {
     if (!curso.Item) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Curso no encontrado' })
+        body: { error: 'Curso no encontrado' }
       };
     }
 
     const instructorDni = curso.Item.instructor_dni;
 
-    // Solo puede eliminarlo el admin o el instructor que lo creó
     if (rol !== 'admin' && dni !== instructorDni) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: 'No tiene permisos para eliminar este curso' })
+        body: { error: 'No tiene permisos para eliminar este curso' }
       };
     }
 
-    // Buscar y eliminar los horarios del curso
+    // Buscar horarios vinculados
     const tenantCursoKey = `${tenant_id}#${curso_id}`;
     const horarios = await dynamodb.query({
       TableName: TABLE_HORARIO,
@@ -87,17 +86,18 @@ exports.handler = async (event) => {
       ExpressionAttributeValues: { ':key': tenantCursoKey }
     }).promise();
 
+    // Eliminar cada horario invocando FUNCION_ELIMINAR_HORARIO (sin stringify)
     const eliminarHorarios = horarios.Items.map(item => {
       return lambda.invoke({
         FunctionName: FUNCION_ELIMINAR_HORARIO,
         InvocationType: 'Event',
         Payload: JSON.stringify({
           headers: { Authorization: token },
-          body: JSON.stringify({
+          body: {
             tenant_id,
             curso_id,
             horario_id: item.horario_id
-          })
+          }
         })
       }).promise();
     });
@@ -112,24 +112,21 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         message: 'Curso y horarios eliminados correctamente',
         curso_id,
         total_horarios: eliminarHorarios.length
-      })
+      }
     };
 
   } catch (e) {
     console.error('Error al eliminar curso:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: e.message
-      })
+      }
     };
   }
 };
-
-
-

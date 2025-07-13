@@ -16,7 +16,7 @@ exports.handler = async (event) => {
     if (!token || !tenant_id) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: 'Token y tenant_id son requeridos' })
+        body: { error: 'Token y tenant_id son requeridos' }
       };
     }
 
@@ -30,7 +30,7 @@ exports.handler = async (event) => {
     }).promise();
 
     const validarPayload = JSON.parse(validar.Payload);
-    
+
     if (validarPayload.statusCode !== 200) {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error desconocido al validar token';
@@ -38,29 +38,30 @@ exports.handler = async (event) => {
       try {
         const parsedBody = JSON.parse(validarPayload.body);
         errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
+      } catch (_) {}
 
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
-    const usuario = JSON.parse(validarPayload.body);
+    const usuario = typeof validarPayload.body === 'string'
+      ? JSON.parse(validarPayload.body)
+      : validarPayload.body;
 
     // Verificar que sea un instructor
     if (usuario.rol !== 'instructor') {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: 'Solo los instructores pueden crear cursos' })
+        body: { error: 'Solo los instructores pueden crear cursos' }
       };
     }
 
     if (!nombre || !descripcion || !inicio || !fin || !precio) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan campos obligatorios' })
+        body: { error: 'Faltan campos obligatorios' }
       };
     }
 
@@ -85,22 +86,22 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         message: 'Curso creado exitosamente',
         curso_id,
         nombre,
         instructor: usuario.full_name
-      })
+      }
     };
 
   } catch (error) {
     console.error('Error al crear curso:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: error.message
-      })
+      }
     };
   }
 };

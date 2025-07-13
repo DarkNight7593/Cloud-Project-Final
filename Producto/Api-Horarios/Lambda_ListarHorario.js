@@ -8,12 +8,17 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, curso_id, limit = 5, lastHorarioId } = event.queryStringParameters || {};
+    const {
+      tenant_id,
+      curso_id,
+      limit = 5,
+      lastHorarioId
+    } = event.query || {};
 
     if (!token || !tenant_id || !curso_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan token, tenant_id o curso_id' })
+        body: { error: 'Faltan token, tenant_id o curso_id' }
       };
     }
 
@@ -30,31 +35,27 @@ exports.handler = async (event) => {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error desconocido al validar token';
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
+        const parsedBody = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsedBody.error || errorMessage;
       } catch (_) {}
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
-    const tenant_id_curso_id = `${tenant_id}#${curso_id}`;
+    const tenantCursoKey = `${tenant_id}#${curso_id}`;
     const parsedLimit = parseInt(limit);
-
-    // Armamos la query paginada con condición opcional
-    let keyCondition = 'tenant_id_curso_id = :pk';
-    const expressionValues = { ':pk': tenant_id_curso_id };
-
-    if (lastHorarioId) {
-      keyCondition += ' AND horario_id > :lastHorarioId';
-      expressionValues[':lastHorarioId'] = lastHorarioId;
-    }
 
     const params = {
       TableName: TABLE_HORARIO,
-      KeyConditionExpression: keyCondition,
-      ExpressionAttributeValues: expressionValues,
+      KeyConditionExpression: 'tenant_id_curso_id = :pk' + (lastHorarioId ? ' AND horario_id > :last' : ''),
+      ExpressionAttributeValues: {
+        ':pk': tenantCursoKey,
+        ...(lastHorarioId && { ':last': lastHorarioId })
+      },
       Limit: parsedLimit
     };
 
@@ -62,7 +63,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         horarios: result.Items,
         paginacion: {
           ultimoHorarioId: result.Items.length > 0
@@ -70,18 +71,17 @@ exports.handler = async (event) => {
             : null,
           total: result.Items.length
         }
-      })
+      }
     };
 
   } catch (e) {
     console.error('Error al listar horarios:', e);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: e.message
-      })
+      }
     };
   }
 };
-

@@ -24,26 +24,26 @@ exports.handler = async (event) => {
       body = JSON.parse(body);
     }
 
-    const { tenant_id, curso_id, dias, inicio_hora, fin_hora } = body;
+    const { tenant_id, curso_id, dias, inicio_hora, fin_hora } = body || {};
 
     if (!token || !tenant_id) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+        body: { error: 'Token o tenant_id no proporcionado' }
       };
     }
 
     if (!curso_id || !dias || !inicio_hora || !fin_hora) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Faltan curso_id, dias, inicio_hora o fin_hora' })
+        body: { error: 'Faltan curso_id, dias, inicio_hora o fin_hora' }
       };
     }
 
     if (!Array.isArray(dias) || dias.length === 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'dias debe ser un arreglo no vacío' })
+        body: { error: 'dias debe ser un arreglo no vacío' }
       };
     }
 
@@ -61,32 +61,34 @@ exports.handler = async (event) => {
       let errorMessage = 'Error desconocido al validar token';
 
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
+        const parsedBody = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
+      } catch (_) {}
 
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
-    // ✅ Verificar si el curso existe
+    // Verificar si el curso existe
     const buscarCurso = await lambda.invoke({
       FunctionName: FUNCION_CURSO,
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         headers: { Authorization: token },
-        queryStringParameters: { tenant_id, curso_id }
+        query: { tenant_id, curso_id }
       })
     }).promise();
 
     const cursoPayload = JSON.parse(buscarCurso.Payload);
+
     if (cursoPayload.statusCode !== 200) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Curso no encontrado para este tenant_id y curso_id' })
+        body: { error: 'Curso no encontrado para este tenant_id y curso_id' }
       };
     }
 
@@ -102,13 +104,14 @@ exports.handler = async (event) => {
     }).promise();
 
     const hayChoque = result.Items.find(h =>
-      diasChocan(dias, h.dias) && horariosChocan(inicio_hora, fin_hora, h.inicio_hora, h.fin_hora)
+      diasChocan(dias, h.dias) &&
+      horariosChocan(inicio_hora, fin_hora, h.inicio_hora, h.fin_hora)
     );
 
     if (hayChoque) {
       return {
         statusCode: 409,
-        body: JSON.stringify({ error: 'Existe choque de horario en al menos un día' })
+        body: { error: 'Existe choque de horario en al menos un día' }
       };
     }
 
@@ -118,7 +121,7 @@ exports.handler = async (event) => {
     await dynamodb.put({
       TableName: TABLE_HORARIO,
       Item: {
-        tenant_id,  
+        tenant_id,
         tenant_id_curso_id,
         horario_id,
         dias,
@@ -129,23 +132,23 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         message: 'Horario creado exitosamente',
         horario_id,
         dias,
         inicio_hora,
         fin_hora
-      })
+      }
     };
 
   } catch (error) {
     console.error('Error al crear horario:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: error.message
-      })
+      }
     };
   }
 };

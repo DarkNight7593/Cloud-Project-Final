@@ -7,12 +7,6 @@ from decimal import Decimal
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Para convertir Decimals en float/int cuando se hace json.dumps
-def json_serial(obj):
-    if isinstance(obj, Decimal):
-        return int(obj) if obj % 1 == 0 else float(obj)
-    raise TypeError(f"Type {type(obj)} not serializable")
-
 def lambda_handler(event, context):
     try:
         token = event['headers'].get('Authorization')
@@ -25,10 +19,10 @@ def lambda_handler(event, context):
         if not token or not tenant_id:
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'Faltan token o tenant_id'})
+                'body': {'error': 'Faltan token o tenant_id'}
             }
 
-        # Validar token con Lambda externa
+        # Validar token llamando a otra Lambda (sin json.dumps)
         lambda_client = boto3.client('lambda')
         funcion_validar = os.environ['FUNCION_VALIDAR']
 
@@ -36,10 +30,7 @@ def lambda_handler(event, context):
             FunctionName=funcion_validar,
             InvocationType='RequestResponse',
             Payload=json.dumps({
-                'body': {
-                    'token': token,
-                    'tenant_id': tenant_id
-                }
+                'body': {'token': token, 'tenant_id': tenant_id}
             })
         )
 
@@ -47,17 +38,21 @@ def lambda_handler(event, context):
         if validar_payload.get('statusCode') != 200:
             return {
                 'statusCode': validar_payload.get('statusCode', 403),
-                'body': json.dumps({'error': 'Token inválido o expirado'})
+                'body': {'error': 'Token inválido o expirado'}
             }
 
-        user_info = json.loads(validar_payload['body'])
+        # ✅ Ya no es string: leer directamente como objeto
+        user_info = validar_payload['body']
+        if isinstance(user_info, str):
+            user_info = json.loads(user_info)
+
         if user_info.get('rol') != 'admin':
             return {
                 'statusCode': 403,
-                'body': json.dumps({'error': 'Solo un administrador puede modificar la organización'})
+                'body': {'error': 'Solo un administrador puede modificar la organización'}
             }
 
-        # Verificar si existe la organización
+        # Verificar existencia del tenant
         dynamodb = boto3.resource('dynamodb')
         tabla = dynamodb.Table(os.environ["TABLE_ORG"])
 
@@ -65,10 +60,10 @@ def lambda_handler(event, context):
         if 'Item' not in existe:
             return {
                 'statusCode': 404,
-                'body': json.dumps({'error': f"No existe organización con tenant_id '{tenant_id}'"})
+                'body': {'error': f"No existe organización con tenant_id '{tenant_id}'"}
             }
 
-        # Campos permitidos a actualizar
+        # Campos permitidos para actualización
         campos_permitidos = ['dominio', 'descripcion', 'correo', 'detalle']
         update_expr = []
         expr_values = {}
@@ -89,7 +84,7 @@ def lambda_handler(event, context):
         if not update_expr:
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'No se proporcionaron campos para actualizar'})
+                'body': {'error': 'No se proporcionaron campos para actualizar'}
             }
 
         update_expression = "SET " + ", ".join(update_expr)
@@ -108,24 +103,25 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': json.dumps({
+            'body': {
                 'message': 'Organización actualizada correctamente',
                 'tenant_id': tenant_id,
                 'actualizados': actualizados
-            }, default=json_serial)
+            }
         }
 
     except KeyError as e:
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f"Campo faltante: {str(e)}"})
+            'body': {'error': f"Campo faltante: {str(e)}"}
         }
+
     except Exception as e:
         logger.error("Error inesperado en modificar organización", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({
+            'body': {
                 'error': 'Error interno del servidor',
                 'detalle': str(e)
-            }, default=json_serial)
+            }
         }

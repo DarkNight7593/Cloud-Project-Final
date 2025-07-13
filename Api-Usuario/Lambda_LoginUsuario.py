@@ -9,26 +9,21 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Función para hashear contraseñas
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Encabezados CORS comunes
-
 def lambda_handler(event, context):
     try:
-        # Manejo de preflight OPTIONS
+        # Manejo del preflight OPTIONS
         if event.get('httpMethod') == 'OPTIONS':
             return {
                 'statusCode': 200,
-                'body': json.dumps({'message': 'Preflight OK'})
+                'body': {'message': 'Preflight OK'}
             }
 
-        # Parseo del cuerpo si es string
-        if isinstance(event['body'], str):
-            event['body'] = json.loads(event['body'])
+        # Parsear body si viene como string
+        body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
 
-        body = event['body']
         tenant_id = body.get('tenant_id')
         dni = body.get('dni')
         password = body.get('password')
@@ -37,7 +32,7 @@ def lambda_handler(event, context):
         if not all([tenant_id, dni, password, rol]):
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'Faltan tenant_id, dni, password o rol'})
+                'body': {'error': 'Faltan tenant_id, dni, password o rol'}
             }
 
         tenant_id_rol = f"{tenant_id}#{rol}"
@@ -57,14 +52,14 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 403,
-                'body': json.dumps({'error': 'Usuario no existe o rol incorrecto'})
+                'body': {'error': 'Usuario no existe o rol incorrecto'}
             }
 
         usuario = response['Item']
         if usuario['password'] != hashed_password:
             return {
                 'statusCode': 403,
-                'body': json.dumps({'error': 'Password incorrecto'})
+                'body': {'error': 'Password incorrecto'}
             }
 
         token = str(uuid.uuid4())
@@ -89,23 +84,23 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': json.dumps({
+            'body': {
                 'message': 'Login exitoso',
                 'token': token,
                 'expires_at': expiracion_str
-            })
+            }
         }
 
     except KeyError as e:
         logger.warning(f"Campo faltante: {str(e)}")
         return {
             'statusCode': 400,
-            'body': json.dumps({'error': f'Falta el campo requerido: {str(e)}'})
+            'body': {'error': f'Falta el campo requerido: {str(e)}'}
         }
 
     except Exception as e:
         logger.error("Error inesperado", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            'body': {'error': str(e)}
         }

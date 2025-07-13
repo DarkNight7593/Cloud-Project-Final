@@ -9,12 +9,24 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { tenant_id, horario_id } = JSON.parse(event.body);
+    let body = event.body;
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+
+    const { tenant_id, horario_id } = body || {};
 
     if (!token || !tenant_id) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+        body: { error: 'Token o tenant_id no proporcionado' }
+      };
+    }
+
+    if (!horario_id) {
+      return {
+        statusCode: 400,
+        body: { error: 'Falta el campo horario_id' }
       };
     }
 
@@ -30,19 +42,14 @@ exports.handler = async (event) => {
       let statusCode = validarPayload.statusCode;
       let errorMessage = 'Error al validar token';
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
+        const parsedBody = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsedBody.error || errorMessage;
       } catch (_) {}
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
-      };
-    }
-
-    if (!horario_id) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Falta el campo horario_id' })
+        body: { error: errorMessage }
       };
     }
 
@@ -61,7 +68,7 @@ exports.handler = async (event) => {
     if (!result.Items || result.Items.length === 0) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Horario no encontrado' })
+        body: { error: 'Horario no encontrado' }
       };
     }
 
@@ -75,14 +82,14 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Horario eliminado exitosamente' })
+      body: { message: 'Horario eliminado exitosamente' }
     };
 
   } catch (error) {
     console.error('Error al eliminar horario:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error interno', detalle: error.message })
+      body: { error: 'Error interno', detalle: error.message }
     };
   }
 };

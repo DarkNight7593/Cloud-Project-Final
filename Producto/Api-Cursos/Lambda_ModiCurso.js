@@ -8,12 +8,12 @@ const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
 exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
-    const { curso_id, tenant_id } = event.queryStringParameters || {};
+    const { curso_id, tenant_id } = event.query || {};
 
     if (!token || !tenant_id) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Token o tenant_id no proporcionado' })
+        body: { error: 'Token o tenant_id no proporcionado' }
       };
     }
 
@@ -31,29 +31,33 @@ exports.handler = async (event) => {
       let errorMessage = 'Error desconocido al validar token';
 
       try {
-        const parsedBody = JSON.parse(validarPayload.body);
+        const parsedBody = typeof validarPayload.body === 'string'
+          ? JSON.parse(validarPayload.body)
+          : validarPayload.body;
         errorMessage = parsedBody.error || errorMessage;
-      } catch (_) {
-      }
+      } catch (_) {}
 
       return {
         statusCode,
-        body: JSON.stringify({ error: errorMessage })
+        body: { error: errorMessage }
       };
     }
 
-    const usuario = JSON.parse(validarPayload.body); // contiene rol y dni
+    const usuario = typeof validarPayload.body === 'string'
+      ? JSON.parse(validarPayload.body)
+      : validarPayload.body;
+
     const rol = usuario.rol;
     const dni = usuario.dni;
 
     if (!curso_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'curso_id requerido' })
+        body: { error: 'curso_id requerido' }
       };
     }
 
-    // Obtener curso actual para validar que el instructor sea el mismo
+    // Obtener curso actual
     const curso = await dynamodb.get({
       TableName: TABLE_CURSO,
       Key: { tenant_id, curso_id }
@@ -62,17 +66,17 @@ exports.handler = async (event) => {
     if (!curso.Item) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Curso no encontrado' })
+        body: { error: 'Curso no encontrado' }
       };
     }
 
     const cursoInstructor = curso.Item.instructor_dni;
 
-    // Solo puede editar si es admin o el instructor del curso
+    // Verificar permisos
     if (rol !== 'admin' && dni !== cursoInstructor) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: 'No tiene permisos para editar este curso' })
+        body: { error: 'No tiene permisos para editar este curso' }
       };
     }
 
@@ -90,7 +94,7 @@ exports.handler = async (event) => {
     if (Object.keys(updateFields).length === 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'No hay campos válidos para actualizar' })
+        body: { error: 'No hay campos válidos para actualizar' }
       };
     }
 
@@ -115,22 +119,21 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
+      body: {
         message: 'Curso actualizado correctamente',
         curso_id,
         actualizaciones: updateFields
-      })
+      }
     };
 
   } catch (error) {
     console.error('Error al actualizar curso:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
+      body: {
         error: 'Error interno del servidor',
         detalle: error.message
-      })
+      }
     };
   }
 };
-

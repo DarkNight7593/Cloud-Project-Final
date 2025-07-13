@@ -2,7 +2,6 @@ import boto3
 import os
 import json
 import logging
-import urllib.request
 from decimal import Decimal
 
 logger = logging.getLogger()
@@ -17,6 +16,7 @@ def json_serial(obj):
 
 def lambda_handler(event, context):
     try:
+        # Obtener el body como dict
         body = event.get('body')
         if isinstance(body, str):
             body = json.loads(body)
@@ -27,36 +27,37 @@ def lambda_handler(event, context):
         correo = body.get('correo')
         detalle = body.get('detalle')  # opcional
 
+        # Validación básica
         if not all([tenant_id, dominio, descripcion, correo]):
             return {
                 'statusCode': 400,
-                'body': json.dumps({
+                'body': {
                     'error': 'Faltan uno o más campos requeridos: tenant_id, dominio, descripcion, correo'
-                })
+                }
             }
 
+        # Inicializar recursos
         nombre_tabla = os.environ["TABLE_ORG"]
         dynamodb = boto3.resource('dynamodb')
         t_org = dynamodb.Table(nombre_tabla)
 
-        # Verificar si ya existe el tenant_id
-        respuesta = t_org.get_item(Key={'tenant_id': tenant_id})
-        if 'Item' in respuesta:
+        # Validar que no exista
+        if 'Item' in t_org.get_item(Key={'tenant_id': tenant_id}):
             return {
                 'statusCode': 409,
-                'body': json.dumps({
+                'body': {
                     'error': f"Ya existe una organización con tenant_id '{tenant_id}'"
-                })
+                }
             }
 
-        # Calcular puerto dinámico
+        # Asignar puerto
         scan_response = t_org.scan(Select='COUNT')
         cantidad_orgs = scan_response.get('Count', 0)
         puerto = 9200 + int(cantidad_orgs)
 
         logger.info(f"Puerto asignado para {tenant_id}: {puerto}")
-        
-        # Crear item para DynamoDB
+
+        # Crear item y guardar
         item = {
             'tenant_id': tenant_id,
             'descripcion': descripcion,
@@ -64,37 +65,32 @@ def lambda_handler(event, context):
             'dominio': dominio,
             'puerto': puerto
         }
-
         if detalle is not None:
             item['detalle'] = detalle
 
-        # Guardar en DynamoDB
         t_org.put_item(Item=item)
 
         return {
             'statusCode': 200,
-            'body': json.dumps({
+            'body': {
                 'message': 'Organización registrada exitosamente',
                 'tenant_id': tenant_id,
                 'puerto': puerto
-            }, default=json_serial)
+            }
         }
 
     except KeyError as e:
         logger.warning(f"Campo faltante: {str(e)}")
         return {
             'statusCode': 400,
-            'body': json.dumps({
-                'error': f"Campo faltante en el body: {str(e)}"
-            })
+            'body': { 'error': f"Campo faltante en el body: {str(e)}" }
         }
     except Exception as e:
         logger.error("Excepción inesperada", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({
+            'body': {
                 'error': 'Error interno del servidor',
                 'detalle': str(e)
-            }, default=json_serial)
+            }
         }
-

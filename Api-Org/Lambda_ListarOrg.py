@@ -1,14 +1,11 @@
 import boto3
 import os
-import json
 import logging
 from decimal import Decimal
-from boto3.dynamodb.conditions import Key, Attr
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Función para serializar Decimals
 def json_serial(obj):
     if isinstance(obj, Decimal):
         return int(obj) if obj % 1 == 0 else float(obj)
@@ -25,18 +22,18 @@ def lambda_handler(event, context):
 
         return {
             "statusCode": 200,
-            "body": json.dumps({
+            "body": {
                 "organizaciones": items,
                 "total": len(items)
-            }, default=json_serial)
+            }
         }
 
     except Exception as e:
         logger.error("Error inesperado en listar organizaciones", exc_info=True)
         return {
             "statusCode": 500,
-            "body": json.dumps({
+            "body": {
                 "error": "Error interno del servidor",
                 "detalle": str(e)
-            })
+            }
         }
