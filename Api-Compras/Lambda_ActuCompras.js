@@ -105,6 +105,7 @@ exports.handler = async (event) => {
     const updates = compras.Items.map(item => {
       const UpdateExpression = `
         set
+          curso_nombre = :nombre,
           precio = :precio,
           fecha_inicio = :inicio,
           fecha_fin = :fin
@@ -116,6 +117,7 @@ exports.handler = async (event) => {
       `;
 
       const ExpressionAttributeValues = {
+        ':nombre': curso.nombre,
         ':precio': curso.precio,
         ':inicio': curso.inicio,
         ':fin': curso.fin,
