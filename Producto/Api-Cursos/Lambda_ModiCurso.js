@@ -4,6 +4,7 @@ const lambda = new AWS.Lambda();
 
 const TABLE_CURSO = process.env.TABLE_CURSO;
 const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
+const FUNCION_ACTUALIZAR_COMPRA = process.env.FUNCION_ACTUALIZAR_COMPRA;
 
 exports.handler = async (event) => {
   try {
@@ -116,6 +117,20 @@ exports.handler = async (event) => {
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues
     }).promise();
+
+    // 🔄 Invocar Lambda para actualizar compras asociadas
+    try {
+      await lambda.invoke({
+        FunctionName: FUNCION_ACTUALIZAR_COMPRA,
+        InvocationType: 'Event', // asincrónico
+        Payload: JSON.stringify({
+          headers: { Authorization: token },
+          query: { tenant_id, curso_id }
+        })
+      }).promise();
+    } catch (e) {
+      console.warn('⚠️ No se pudo invocar actualizarCompras:', e.message);
+    }
 
     return {
       statusCode: 200,

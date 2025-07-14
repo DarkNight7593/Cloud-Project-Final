@@ -4,6 +4,7 @@ const lambda = new AWS.Lambda();
 
 const TABLE_HORARIO = process.env.TABLE_HORARIO;
 const FUNCION_VALIDAR = process.env.FUNCION_VALIDAR;
+const FUNCION_ACTUALIZAR_COMPRA = process.env.FUNCION_ACTUALIZAR_COMPRA;
 
 function diasChocan(d1, d2) {
   return d1.some(d => d2.includes(d));
@@ -18,10 +19,7 @@ exports.handler = async (event) => {
     const token = event.headers?.Authorization;
     let body = event.body;
 
-    if (typeof body === 'string') {
-      body = JSON.parse(body);
-    }
-
+    if (typeof body === 'string') body = JSON.parse(body);
     const { tenant_id, horario_id } = body;
 
     if (!token || !tenant_id || !horario_id) {
@@ -54,7 +52,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Buscar horario existente
+    // Buscar horario actual
     const result = await dynamodb.query({
       TableName: TABLE_HORARIO,
       IndexName: 'tenant_horario_index',
@@ -76,12 +74,12 @@ exports.handler = async (event) => {
     const existing = result.Items[0];
     const tenant_id_curso_id = existing.tenant_id_curso_id;
 
-    // Usar valores antiguos si no se envían nuevos
+    // Usar datos existentes si no vienen nuevos
     const dias = body.dias ?? existing.dias;
     const inicio_hora = body.inicio_hora ?? existing.inicio_hora;
     const fin_hora = body.fin_hora ?? existing.fin_hora;
 
-    // Verificar colisiones con otros horarios del mismo curso
+    // Verificar colisión con otros horarios del curso
     const horarios = await dynamodb.query({
       TableName: TABLE_HORARIO,
       KeyConditionExpression: 'tenant_id_curso_id = :pk',
@@ -117,6 +115,20 @@ exports.handler = async (event) => {
       TableName: TABLE_HORARIO,
       Item: item
     }).promise();
+
+    // 🔄 Invocar Lambda de actualización de compras (no espera respuesta)
+    try {
+      await lambda.invoke({
+        FunctionName: FUNCION_ACTUALIZAR_COMPRA,
+        InvocationType: 'Event', // asincrónico
+        Payload: JSON.stringify({
+          headers: { Authorization: token },
+          query: { tenant_id, curso_id: tenant_id_curso_id.split('#')[1], horario_id }
+        })
+      }).promise();
+    } catch (e) {
+      console.warn('⚠️ Error al invocar actualizarCompras desde horario:', e.message);
+    }
 
     return {
       statusCode: 200,

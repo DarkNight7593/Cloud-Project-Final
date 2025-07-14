@@ -42,6 +42,15 @@ functions:
           cors: true
           integration: lambda
 
+  actualizarCompras:
+    handler: Lambda_ActuCompras.handler
+    events:
+      - http:
+          path: /compra/actualizar
+          method: put
+          cors: true
+          integration: lambda
+
   doc:
     handler: Lambda_Doc.handler
     events:
@@ -69,6 +78,8 @@ resources:
             AttributeType: S
           - AttributeName: alumno_dni
             AttributeType: S
+          - AttributeName: horario_id
+            AttributeType: S
         KeySchema:
           - AttributeName: tenant_id_dni_estado
             KeyType: HASH
@@ -87,6 +98,15 @@ resources:
             Projection:
               ProjectionType: ALL
 
+          - IndexName: tenant_curso_horario_index
+            KeySchema:
+              - AttributeName: tenant_id_curso_id
+                KeyType: HASH
+              - AttributeName: horario_id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
   Outputs:
     TablaComprasStreamArn:
       Description: ARN del Stream de la tabla de compras
@@ -101,4 +121,3 @@ package:
   individually: false
   include:
     - '**'
-    

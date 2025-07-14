@@ -9,6 +9,8 @@ provider:
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
   environment:
+    FUNCION_ELIMINAR_COMPRAS: api-compras-${sls:stage}-eliminarCompra
+    FUNCION_ACTUALIZAR_COMPRA: api-compras-${sls:stage}-actualizarCompras
     FUNCION_CURSO: api-curso-${sls:stage}-obtenerCurso
     TABLE_HORARIO: ${sls:stage}-t_horario
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar

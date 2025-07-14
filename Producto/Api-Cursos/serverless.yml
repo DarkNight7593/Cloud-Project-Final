@@ -14,6 +14,7 @@ provider:
     TABLE_HORARIO: ${sls:stage}-t_horario
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
     FUNCION_ELIMINAR_HORARIO: api-horario-${sls:stage}-eliminarHorario
+    FUNCION_ACTUALIZAR_COMPRA: api-compras-${sls:stage}-actualizarCompras
 
 functions:
   crearCurso:
