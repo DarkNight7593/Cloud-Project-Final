@@ -7,7 +7,7 @@ provider:
   memorySize: 1024
   timeout: 30
   iam:
-    role: arn:aws:iam::752087942362:role/LabRole
+    role: arn:aws:iam::693784643162:role/LabRole
   environment:
     FUNCION_ELIMINAR_COMPRAS: api-compras-${sls:stage}-eliminarCompra
     FUNCION_ACTUALIZAR_COMPRA: api-compras-${sls:stage}-actualizarCompras
