@@ -8,7 +8,7 @@ from decimal import Decimal
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-FASTAPI_URL = "http://34.233.20.17:8080/crear-tenant"
+FASTAPI_URL = "http://34.202.17.116:8080/crear-tenant"
 
 def json_serial(obj):
     if isinstance(obj, Decimal):
