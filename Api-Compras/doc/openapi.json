@@ -3,7 +3,7 @@
   "info": {
     "title": "API de Compras",
     "version": "1.0.0",
-    "description": "API que permite a los alumnos registrar, listar y eliminar compras de cursos. Se requiere autenticación por token y las acciones disponibles dependen del rol del usuario (alumno, instructor, admin)."
+    "description": "API que permite a los alumnos registrar, listar, eliminar y actualizar compras de cursos. Se requiere autenticación por token y las acciones disponibles dependen del rol del usuario (alumno, instructor, admin)."
   },
   "components": {
     "securitySchemes": {
@@ -21,10 +21,7 @@
           "tenant_id": { "type": "string", "example": "academia123" },
           "curso_id": { "type": "string", "example": "curso001" },
           "horario_id": { "type": "string", "example": "hora01" },
-          "estado": {
-            "type": "string",
-            "enum": ["reservado", "inscrito"]
-          }
+          "estado": { "type": "string", "enum": ["reservado", "inscrito"] }
         }
       },
       "EliminarCompra": {
@@ -50,14 +47,12 @@
       }
     }
   },
-  "security": [
-    { "bearerAuth": [] }
-  ],
+  "security": [{ "bearerAuth": [] }],
   "paths": {
     "/compra/comprar": {
       "post": {
         "summary": "Registrar una compra",
-        "description": "Solo los usuarios con rol 'alumno' pueden registrar una compra. Valida curso, horario y evita duplicados. Si el estado es 'inscrito', elimina la reserva previa.",
+        "description": "Solo los usuarios con rol 'alumno' pueden registrar una compra. Valida curso, horario y evita duplicados.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -78,23 +73,25 @@
           },
           "400": {
             "description": "Datos faltantes o inválidos",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
           },
           "403": {
-            "description": "Solo alumnos pueden realizar esta operación",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+            "description": "Solo alumnos pueden realizar esta operación"
           },
           "409": {
-            "description": "Ya existe una compra con este estado",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+            "description": "Ya existe una compra con este estado"
           }
         }
       }
     },
     "/compra/eliminar": {
       "delete": {
-        "summary": "Eliminar compra de curso",
-        "description": "Elimina una compra (reservado o inscrito) asociada al alumno autenticado.",
+        "summary": "Eliminar compra",
+        "description": "Elimina una compra para un curso y alumno específico. También puede eliminar todas las compras de un horario si es admin/instructor.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -105,29 +102,16 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "Compra eliminada correctamente",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/MensajeExito" }
-              }
-            }
-          },
-          "403": {
-            "description": "Solo alumnos pueden eliminar sus compras",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "No se encontró ninguna compra válida",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "200": { "description": "Compra eliminada correctamente" },
+          "403": { "description": "No autorizado" },
+          "404": { "description": "Compra no encontrada" }
         }
       }
     },
     "/compra/listar": {
       "get": {
         "summary": "Listar compras según rol",
-        "description": "Listar compras del usuario autenticado. \n\n- **Alumno**: Listado filtrado por estado. \n- **Instructor/Admin**: Listado por curso con paginación.",
+        "description": "Lista las compras según el rol:\n- Alumno: por estado\n- Instructor/Admin: por curso y paginación",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "tenant_id", "in": "query", "required": true, "schema": { "type": "string" } },
@@ -139,7 +123,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Lista de compras del usuario",
+            "description": "Lista de compras",
             "content": {
               "application/json": {
                 "schema": {
@@ -159,13 +143,33 @@
               }
             }
           },
-          "403": {
-            "description": "Rol no autorizado",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "403": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/compra/actualizar": {
+      "put": {
+        "summary": "Actualizar datos de compras",
+        "description": "Actualiza datos del curso y horario en todas las compras de un curso (y opcionalmente horario).",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "tenant_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "curso_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "horario_id", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compras actualizadas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MensajeExito" }
+              }
+            }
+          },
+          "400": { "description": "Faltan parámetros" },
+          "404": { "description": "Curso o compras no encontradas" }
         }
       }
     }
   }
 }
-

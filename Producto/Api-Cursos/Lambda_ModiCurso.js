@@ -83,7 +83,7 @@ exports.handler = async (event) => {
 
     // Procesar actualizaciones
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const allowedFields = ['nombre', 'descripcion', 'inicio', 'fin', 'precio'];
+    const allowedFields = ['nombre', 'descripcion', 'inicio', 'fin', 'precio','informacion'];
 
     const updateFields = {};
     for (const field of allowedFields) {

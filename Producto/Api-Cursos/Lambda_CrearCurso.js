@@ -11,7 +11,7 @@ exports.handler = async (event) => {
   try {
     const token = event.headers?.Authorization;
     const data = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const { tenant_id, nombre, descripcion, inicio, fin, precio } = data;
+    const { tenant_id, nombre, descripcion, inicio, fin, precio,informacion } = data;
 
     if (!token || !tenant_id) {
       return {
@@ -58,7 +58,7 @@ exports.handler = async (event) => {
       };
     }
 
-    if (!nombre || !descripcion || !inicio || !fin || !precio) {
+    if (!nombre || !descripcion || !inicio || !fin || !precio || !informacion) {
       return {
         statusCode: 400,
         body: { error: 'Faltan campos obligatorios' }
@@ -71,6 +71,7 @@ exports.handler = async (event) => {
       curso_id,
       nombre,
       descripcion,
+      informacion,
       inicio,
       fin,
       precio,
