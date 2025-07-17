@@ -7,7 +7,7 @@ provider:
   memorySize: 1024
   timeout: 30
   iam:
-    role: arn:aws:iam::693784643162:role/LabRole
+    role: arn:aws:iam::735395269158:role/LabRole
   environment:
     TABLE_CURSO: ${sls:stage}-t_curso
     TABLE_USER: ${sls:stage}-t_usuario
