@@ -7,7 +7,7 @@ provider:
   memorySize: 1024
   timeout: 30
   iam:
-    role: arn:aws:iam::193257252894:role/LabRole
+    role: arn:aws:iam::095510499387:role/LabRole
   environment:
     TABLE_COMPRAS: ${sls:stage}-t_compras
     FUNCION_VALIDAR: api-usuario-${sls:stage}-validar
